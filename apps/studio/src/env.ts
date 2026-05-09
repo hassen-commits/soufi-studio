@@ -1,0 +1,25 @@
+import { z } from "zod";
+
+const schema = z.object({
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  SUPABASE_SERVICE_KEY: z.string().min(20),
+  ANTHROPIC_API_KEY: z.string().startsWith("sk-ant-"),
+  OPENAI_API_KEY: z.string().startsWith("sk-"),
+  ELEVENLABS_API_KEY: z.string().min(10).optional(),
+  ELEVENLABS_VOICE_ID: z.string().default("ayJ26iqFFJdDB5V9wA0X"),
+  PORT: z.coerce.number().default(3001),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  CLAUDE_MODEL: z.string().default("claude-sonnet-4-6"),
+  EMBEDDING_MODEL: z.string().default("text-embedding-3-small"),
+});
+
+const parsed = schema.safeParse(process.env);
+
+if (!parsed.success) {
+  console.error("\n[soufi-studio] Variables d'environnement invalides:\n");
+  console.error(JSON.stringify(parsed.error.flatten().fieldErrors, null, 2));
+  console.error("\nVérifie ton fichier .env (à la racine du monorepo).\n");
+  process.exit(1);
+}
+
+export const env = parsed.data;
