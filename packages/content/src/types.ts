@@ -1,0 +1,81 @@
+export type AuthorKey =
+  | "rumi"
+  | "ibn_arabi"
+  | "ghazali"
+  | "tustari"
+  | "maitres_soufis";
+
+export type Language = "fr" | "en" | "ar";
+
+export type Tradition = "soufisme" | "tafsir_esoterique" | "poesie_mystique";
+
+export interface ChunkMetadata {
+  author: AuthorKey | string;
+  work?: string;
+  work_fr?: string;
+  language?: Language;
+  tradition?: Tradition;
+  translate_to?: Language;
+  citation_allowed?: boolean;
+  source_url?: string;
+  page?: number;
+  theme?: string[];
+}
+
+export interface Chunk {
+  id: number | string;
+  content: string;
+  metadata: ChunkMetadata;
+  embedding?: number[];
+  created_at?: string;
+}
+
+export interface Citation {
+  id: string;
+  slug: string;
+  author: AuthorKey | string;
+  authorLabel: string;
+  work?: string;
+  workFr?: string;
+  language: Language;
+  text: string;
+  textFr?: string;
+  themes?: string[];
+  source?: string;
+}
+
+export interface Maitre {
+  key: AuthorKey;
+  name: string;
+  fullName: string;
+  birth?: number;
+  death?: number;
+  origin: string;
+  bio: string;
+  works: { title: string; titleFr?: string; year?: number }[];
+  imageUrl?: string;
+  citationCount?: number;
+}
+
+export type EpisodeMode = "podcast" | "youtube_script" | "compare" | "chat";
+export type EpisodeStatus = "draft" | "audio_ready" | "video_ready" | "published";
+
+export interface Episode {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  mode: EpisodeMode;
+  status: EpisodeStatus;
+  authors: AuthorKey[];
+  themes: string[];
+  citations: string[];
+  scriptMd?: string;
+  audioUrl?: string;
+  videoLongUrl?: string;
+  shortClipUrls?: string[];
+  youtubeId?: string;
+  publishedAt?: string;
+  createdAt: string;
+  durationSec?: number;
+}

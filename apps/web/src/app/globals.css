@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: #c9a96e33;
+    color: #1a1a2e;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-cormorant), serif;
+    font-weight: 500;
+    color: #1a1a2e;
+    letter-spacing: -0.005em;
+  }
+
+  blockquote {
+    font-family: var(--font-cormorant), serif;
+    font-style: italic;
+    color: #c9a84c;
+  }
+}
+
+@layer components {
+  .citation-text {
+    font-family: var(--font-cormorant), serif;
+    font-style: italic;
+    line-height: 1.65;
+    color: #1a1a2e;
+  }
+
+  .arabic-text {
+    font-family: var(--font-amiri), serif;
+    direction: rtl;
+    text-align: right;
+    line-height: 2;
+  }
+
+  .ornament {
+    display: inline-block;
+    color: #c9a96e;
+    font-size: 1.25rem;
+    letter-spacing: 0.4em;
+  }
+
+  .gold-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #c9a96e88, transparent);
+    margin: 2rem auto;
+    max-width: 12rem;
+  }
+}
