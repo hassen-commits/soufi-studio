@@ -1,0 +1,29 @@
+{
+  "name": "@soufi/render",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "render:short": "remotion render ShortVertical out/short.mp4",
+    "render:long": "remotion render PodcastLong out/long.mp4",
+    "render:test": "remotion render ShortVertical out/test.mp4 --props=\"{\\\"citation\\\":{\\\"text\\\":\\\"Le silence est la langue de Dieu, tout le reste est une mauvaise traduction.\\\",\\\"author\\\":\\\"Rûmî\\\",\\\"work\\\":\\\"Mathnawî\\\"}}\"",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf out .turbo"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.243",
+    "@remotion/google-fonts": "^4.0.243",
+    "@soufi/content": "workspace:*",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "^4.0.243",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "typescript": "^5.7.2"
+  }
+}
