@@ -11,6 +11,20 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   CLAUDE_MODEL: z.string().default("claude-sonnet-4-6"),
   EMBEDDING_MODEL: z.string().default("text-embedding-3-small"),
+
+  // YouTube Data API v3 (OAuth refresh-token flow)
+  YOUTUBE_CLIENT_ID: z.string().optional(),
+  YOUTUBE_CLIENT_SECRET: z.string().optional(),
+  YOUTUBE_REFRESH_TOKEN: z.string().optional(),
+
+  // Webhook publish (Buffer / Make / Zapier / n8n)
+  PUBLISH_WEBHOOK_URL: z.string().url().optional(),
+  PUBLISH_WEBHOOK_SECRET: z.string().optional(),
+
+  // Newsletter (Resend)
+  RESEND_API_KEY: z.string().startsWith("re_").optional(),
+  NEWSLETTER_FROM: z.string().optional(),
+  NEWSLETTER_TO: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

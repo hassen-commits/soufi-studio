@@ -3,6 +3,9 @@ import { ragSearch, type RagSearchInput } from "./handlers/rag-search.js";
 import { translateEnFr, type TranslateInput } from "./handlers/translate.js";
 import { generateAudio, type GenerateAudioInput } from "./handlers/audio.js";
 import { renderVideo, type RenderVideoInput } from "./handlers/render-video.js";
+import { publishYoutube, type PublishYouTubeInput } from "./handlers/publish-youtube.js";
+import { publishWebhook, type PublishWebhookInput } from "./handlers/publish-webhook.js";
+import { sendNewsletter, type SendNewsletterInput } from "./handlers/send-newsletter.js";
 import { logger } from "../lib/logger.js";
 
 export const TOOL_DEFS: Anthropic.Tool[] = [
@@ -75,6 +78,118 @@ export const TOOL_DEFS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "publish_youtube",
+    description:
+      "Upload une vidéo MP4 sur YouTube via l'API Data v3. Retourne l'ID YouTube " +
+      "et l'URL publique. Pour un YouTube Short, mettre is_short: true (ajoute " +
+      "automatiquement #Shorts au titre/description). Privacy par défaut : private — " +
+      "passer 'public' pour publier directement, 'unlisted' pour une URL secrète.",
+    input_schema: {
+      type: "object",
+      properties: {
+        video_path: {
+          type: "string",
+          description:
+            "Chemin local ou /media/xxx.mp4 (idéalement la valeur 'url' retournée par render_video).",
+        },
+        title: {
+          type: "string",
+          description: "Titre (max 100 chars).",
+        },
+        description: {
+          type: "string",
+          description:
+            "Description (max 5000 chars). Inclure timestamps de chapitres et liens utiles.",
+        },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Tags YouTube (30 max). Si omis, tags par défaut soufisme/rûmî/ibn arabi/etc.",
+        },
+        privacy: {
+          type: "string",
+          enum: ["public", "unlisted", "private"],
+          description: "Visibilité (default: private — l'utilisateur doit confirmer avant public).",
+        },
+        is_short: {
+          type: "boolean",
+          description: "true pour YouTube Shorts (ajoute #Shorts).",
+        },
+      },
+      required: ["video_path", "title", "description"],
+    },
+  },
+  {
+    name: "publish_social",
+    description:
+      "Publie sur TikTok / Instagram Reels / Twitter / LinkedIn via un webhook " +
+      "générique (à brancher sur Buffer, Make, Zapier ou n8n). Le payload envoyé " +
+      "contient channel, text, media_url et metadata. À utiliser pour cross-poster " +
+      "un short après l'avoir uploadé sur YouTube ou rendu en MP4.",
+    input_schema: {
+      type: "object",
+      properties: {
+        channel: {
+          type: "string",
+          enum: ["tiktok", "instagram_reels", "twitter", "linkedin", "custom"],
+          description: "Plateforme cible.",
+        },
+        text: {
+          type: "string",
+          description: "Caption / texte du post (TikTok caption, IG caption, tweet).",
+        },
+        media_url: {
+          type: "string",
+          description:
+            "URL absolue du fichier média (image ou vidéo). Pour les vidéos locales, préfixer http://localhost:3001/media/ ou production URL.",
+        },
+        scheduled_at: {
+          type: "string",
+          description: "Date ISO 8601 pour publication différée (sinon immédiat).",
+        },
+      },
+      required: ["channel", "text"],
+    },
+  },
+  {
+    name: "send_newsletter",
+    description:
+      "Envoie la newsletter hebdomadaire Soufi Studio via Resend. Format soigné " +
+      "avec une citation centrale + lien vers l'épisode de la semaine. Utiliser à " +
+      "la fin d'un cycle de production hebdomadaire pour récapituler le nouvel épisode.",
+    input_schema: {
+      type: "object",
+      properties: {
+        subject: { type: "string", description: "Objet de l'email." },
+        citation: {
+          type: "object",
+          properties: {
+            text: { type: "string" },
+            author: { type: "string" },
+            work: { type: "string" },
+          },
+          required: ["text", "author"],
+          description: "Citation centrale qui ancre l'email.",
+        },
+        episode: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            url: { type: "string" },
+          },
+          required: ["title", "url"],
+          description: "Optionnel : épisode mis en avant avec CTA.",
+        },
+        intro: {
+          type: "string",
+          description: "Optionnel : court paragraphe d'introduction (max 300 chars).",
+        },
+      },
+      required: ["subject", "citation"],
+    },
+  },
+  {
     name: "render_video",
     description:
       "Compose et rend la vidéo finale via Remotion. Deux compositions disponibles : " +
@@ -126,6 +241,15 @@ export async function executeTool(block: ToolUseBlock): Promise<ToolResultBlock>
         break;
       case "render_video":
         result = await renderVideo(input as RenderVideoInput);
+        break;
+      case "publish_youtube":
+        result = await publishYoutube(input as PublishYouTubeInput);
+        break;
+      case "publish_social":
+        result = await publishWebhook(input as PublishWebhookInput);
+        break;
+      case "send_newsletter":
+        result = await sendNewsletter(input as SendNewsletterInput);
         break;
       default:
         throw new Error(`Outil inconnu : ${name}`);
