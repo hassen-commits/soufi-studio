@@ -18,6 +18,15 @@ const shortSchema = z.object({
   }),
   brand: z.string().optional(),
   audioUrl: z.string().optional(),
+  subtitles: z
+    .array(
+      z.object({
+        start: z.number(),
+        end: z.number(),
+        text: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 const longSchema = z.object({

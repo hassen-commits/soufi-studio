@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { ragSearch, type RagSearchInput } from "./handlers/rag-search.js";
 import { translateEnFr, type TranslateInput } from "./handlers/translate.js";
 import { generateAudio, type GenerateAudioInput } from "./handlers/audio.js";
+import { transcribe, type TranscribeInput } from "./handlers/transcribe.js";
 import { renderVideo, type RenderVideoInput } from "./handlers/render-video.js";
 import { publishYoutube, type PublishYouTubeInput } from "./handlers/publish-youtube.js";
 import { publishWebhook, type PublishWebhookInput } from "./handlers/publish-webhook.js";
@@ -190,6 +191,33 @@ export const TOOL_DEFS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "transcribe_audio",
+    description:
+      "Transcrit un fichier audio MP3 avec Whisper et retourne le texte plein " +
+      "+ les mots regroupés par paquets (default 3 mots) avec timestamps précis. " +
+      "À utiliser après generate_audio pour générer des sous-titres burnt-in dans " +
+      "les shorts (impact énorme : la majorité des utilisateurs TikTok/Reels regardent " +
+      "muet). Passer le résultat 'groups' dans render_video → props.subtitles.",
+    input_schema: {
+      type: "object",
+      properties: {
+        audio_path: {
+          type: "string",
+          description:
+            "Chemin local ou /media/xxx.mp3 (idéalement la valeur 'url' retournée par generate_audio).",
+        },
+        group_size: {
+          type: "integer",
+          minimum: 1,
+          maximum: 8,
+          description:
+            "Mots par groupe de sous-titres (default 3). 2-3 = TikTok-style, 4-5 = lecture posée.",
+        },
+      },
+      required: ["audio_path"],
+    },
+  },
+  {
     name: "render_video",
     description:
       "Compose et rend la vidéo finale via Remotion. Deux compositions disponibles : " +
@@ -238,6 +266,9 @@ export async function executeTool(block: ToolUseBlock): Promise<ToolResultBlock>
         break;
       case "generate_audio":
         result = await generateAudio(input as GenerateAudioInput);
+        break;
+      case "transcribe_audio":
+        result = await transcribe(input as TranscribeInput);
         break;
       case "render_video":
         result = await renderVideo(input as RenderVideoInput);

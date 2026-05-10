@@ -4,6 +4,7 @@ import { Background } from "../components/Background";
 import { AnimatedQuote } from "../components/AnimatedQuote";
 import { Attribution } from "../components/Attribution";
 import { GoldDivider } from "../components/GoldDivider";
+import { Subtitles, type SubtitleGroup } from "../components/Subtitles";
 
 export type ShortVerticalProps = {
   citation: {
@@ -13,12 +14,14 @@ export type ShortVerticalProps = {
   };
   brand?: string;
   audioUrl?: string;
+  subtitles?: SubtitleGroup[];
 } & Record<string, unknown>;
 
 export const ShortVertical: React.FC<ShortVerticalProps> = ({
   citation,
   brand = "Passion_Coran",
   audioUrl,
+  subtitles,
 }) => {
   const frame = useCurrentFrame();
 
@@ -80,24 +83,30 @@ export const ShortVertical: React.FC<ShortVerticalProps> = ({
         ۞
       </div>
 
-      {/* Citation au centre */}
-      <AbsoluteFill
-        style={{
-          justifyContent: "center",
-          alignItems: "center",
-          paddingLeft: 80,
-          paddingRight: 80,
-          paddingTop: 100,
-        }}
-      >
-        <AnimatedQuote
-          text={citation.text}
-          fontSize={fontSize}
-          color={COLORS.parchment}
-          delayFrames={10}
-          maxWidth={900}
-        />
-      </AbsoluteFill>
+      {/* Quand des sous-titres sont fournis : la citation animée s'efface au profit
+          des sous-titres mot-par-mot (TikTok-friendly, lisible muet).
+          Sinon : on garde l'AnimatedQuote au centre. */}
+      {subtitles && subtitles.length > 0 ? (
+        <Subtitles groups={subtitles} fontSize={70} bottom={620} />
+      ) : (
+        <AbsoluteFill
+          style={{
+            justifyContent: "center",
+            alignItems: "center",
+            paddingLeft: 80,
+            paddingRight: 80,
+            paddingTop: 100,
+          }}
+        >
+          <AnimatedQuote
+            text={citation.text}
+            fontSize={fontSize}
+            color={COLORS.parchment}
+            delayFrames={10}
+            maxWidth={900}
+          />
+        </AbsoluteFill>
+      )}
 
       {/* Attribution + divider en bas */}
       <div
