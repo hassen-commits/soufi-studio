@@ -44,7 +44,6 @@ interface ChunkRow {
   content: string;
   embedding: number[] | string;
   metadata: Record<string, unknown>;
-  created_at: string;
 }
 
 async function getCount(db: SupabaseClient, label: string): Promise<number> {
@@ -58,9 +57,20 @@ async function getCount(db: SupabaseClient, label: string): Promise<number> {
 async function ensureNewTable(): Promise<void> {
   const { error } = await newDb.from("chunks").select("id").limit(1);
   if (error) {
-    console.error("\n❌ La table 'chunks' n'existe pas sur le nouveau projet.\n");
-    console.error("Avant de lancer la migration, exécute supabase/setup.sql dans :");
-    console.error(`   ${env.NEW_SUPABASE_URL.replace(".supabase.co", "")}/project/sql/new\n`);
+    console.error("\n❌ Impossible de lire la table 'chunks' sur le nouveau projet.\n");
+    console.error("   Erreur Supabase :");
+    console.error(`   • code    : ${error.code ?? "(aucun)"}`);
+    console.error(`   • message : ${error.message}`);
+    if (error.hint) console.error(`   • hint    : ${error.hint}`);
+    if (error.details) console.error(`   • details : ${error.details}`);
+    console.error("\n   Causes possibles :");
+    console.error(
+      "   1. setup.sql n'a pas été exécuté sur le BON projet → vérifie l'URL du dashboard.",
+    );
+    console.error(
+      "   2. NEW_SUPABASE_SERVICE_KEY est incorrect (mauvaise clé, ou clé d'un autre projet).",
+    );
+    console.error("   3. RLS bloque l'accès (rare avec service_role).\n");
     process.exit(1);
   }
 }
@@ -108,7 +118,7 @@ async function migrate(): Promise<void> {
   while (offset < oldCount) {
     const { data, error } = await oldDb
       .from("chunks")
-      .select("id, content, embedding, metadata, created_at")
+      .select("id, content, embedding, metadata")
       .order("id", { ascending: true })
       .range(offset, offset + env.BATCH_SIZE - 1);
 
@@ -126,7 +136,6 @@ async function migrate(): Promise<void> {
       content: r.content,
       embedding: parseEmbedding(r.embedding),
       metadata: r.metadata,
-      created_at: r.created_at,
     }));
 
     if (env.DRY_RUN) {
