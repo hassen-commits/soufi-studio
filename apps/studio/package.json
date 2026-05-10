@@ -7,6 +7,7 @@
     "dev": "tsx watch --env-file=../../.env src/index.ts",
     "start": "tsx --env-file=../../.env src/index.ts",
     "migrate:corpus": "tsx --env-file=../../.env.migrate src/scripts/migrate-corpus.ts",
+    "clean:ghazali": "tsx --env-file=../../.env src/scripts/clean-ghazali.ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .turbo dist"
   },
