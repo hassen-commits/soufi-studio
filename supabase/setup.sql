@@ -1,13 +1,22 @@
 -- ============================================================
 -- SOUFI STUDIO — Setup Supabase pgvector
--- À exécuter UNE FOIS dans le SQL Editor de Supabase
--- https://supabase.com/dashboard/project/eeqwxxstrmnqurmtbhfj/sql/new
+-- À exécuter UNE FOIS dans le SQL Editor du nouveau projet :
+-- https://supabase.com/dashboard/project/icjvjabyhhugkxauytxh/sql/new
 -- ============================================================
 
--- 1. Activer pgvector (déjà actif normalement)
+-- 1. Activer pgvector
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- 2. Index HNSW sur embedding (recherche rapide)
+-- 2. Table chunks (corpus principal — créée vide, remplie par le script de migration)
+CREATE TABLE IF NOT EXISTS chunks (
+  id bigserial PRIMARY KEY,
+  content text NOT NULL,
+  embedding vector(1536),
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- 3. Index HNSW sur embedding (recherche rapide)
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx
   ON chunks
   USING hnsw (embedding vector_cosine_ops)
