@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "remotion studio",
+    "dev": "remotion studio --port=3002",
     "build": "remotion bundle",
     "render:short": "remotion render ShortVertical out/short.mp4",
     "render:long": "remotion render PodcastLong out/long.mp4",
@@ -14,6 +14,7 @@
   "dependencies": {
     "@remotion/cli": "^4.0.243",
     "@remotion/google-fonts": "^4.0.243",
+    "@remotion/media-utils": "^4.0.243",
     "@soufi/content": "workspace:*",
     "react": "19.0.0",
     "react-dom": "19.0.0",

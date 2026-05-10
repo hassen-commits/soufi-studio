@@ -1,4 +1,4 @@
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate } from "remotion";
+import { AbsoluteFill, Audio, useCurrentFrame, useVideoConfig, interpolate } from "remotion";
 import { COLORS } from "../lib/theme";
 import { Background } from "../components/Background";
 import { GoldDivider } from "../components/GoldDivider";
@@ -9,6 +9,7 @@ export type PodcastLongProps = {
   author?: string;
   brand?: string;
   themeFr?: string;
+  audioUrl?: string;
 } & Record<string, unknown>;
 
 export const PodcastLong: React.FC<PodcastLongProps> = ({
@@ -17,6 +18,7 @@ export const PodcastLong: React.FC<PodcastLongProps> = ({
   author,
   brand = "Passion_Coran",
   themeFr,
+  audioUrl,
 }) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
@@ -34,6 +36,7 @@ export const PodcastLong: React.FC<PodcastLongProps> = ({
   return (
     <AbsoluteFill>
       <Background variant="navy" />
+      {audioUrl ? <Audio src={audioUrl} /> : null}
 
       {/* Brand en haut */}
       <div

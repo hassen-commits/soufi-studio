@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { ragSearch, type RagSearchInput } from "./handlers/rag-search.js";
 import { translateEnFr, type TranslateInput } from "./handlers/translate.js";
 import { generateAudio, type GenerateAudioInput } from "./handlers/audio.js";
+import { renderVideo, type RenderVideoInput } from "./handlers/render-video.js";
 import { logger } from "../lib/logger.js";
 
 export const TOOL_DEFS: Anthropic.Tool[] = [
@@ -59,7 +60,8 @@ export const TOOL_DEFS: Anthropic.Tool[] = [
     description:
       "Génère un fichier audio (mp3) à partir d'un texte français en utilisant " +
       "la voix Soufi Studio (ElevenLabs). À n'appeler que pour produire un podcast " +
-      "ou un short final, jamais pour répondre à une question conversationnelle.",
+      "ou un short final, jamais pour répondre à une question conversationnelle. " +
+      "Retourne notamment 'url' (ex: '/media/xxx.mp3') à passer à render_video.",
     input_schema: {
       type: "object",
       properties: {
@@ -70,6 +72,37 @@ export const TOOL_DEFS: Anthropic.Tool[] = [
         },
       },
       required: ["text", "slug"],
+    },
+  },
+  {
+    name: "render_video",
+    description:
+      "Compose et rend la vidéo finale via Remotion. Deux compositions disponibles : " +
+      "ShortVertical (9:16, TikTok/Reels/Shorts, citation animée) et PodcastLong " +
+      "(16:9, YouTube long format, titre + auteur + waveform). Si une URL audio est " +
+      "fournie dans props.audioUrl, la durée vidéo s'aligne automatiquement sur " +
+      "celle de l'audio. Appeler après generate_audio pour ajouter le son.",
+    input_schema: {
+      type: "object",
+      properties: {
+        composition: {
+          type: "string",
+          enum: ["ShortVertical", "PodcastLong"],
+          description: "Format vidéo : ShortVertical (9:16) ou PodcastLong (16:9).",
+        },
+        output_filename: {
+          type: "string",
+          description: "Nom du fichier MP4 final (ex: 'rumi-silence.mp4').",
+        },
+        props: {
+          type: "object",
+          description:
+            "Props de la composition. Pour ShortVertical : { citation: { text, author, work? }, audioUrl? }. " +
+            "Pour PodcastLong : { title, episodeNumber?, author?, themeFr?, audioUrl? }. " +
+            "Pour audioUrl, utiliser l'URL retournée par generate_audio préfixée par http://localhost:3001.",
+        },
+      },
+      required: ["composition", "output_filename", "props"],
     },
   },
 ];
@@ -90,6 +123,9 @@ export async function executeTool(block: ToolUseBlock): Promise<ToolResultBlock>
         break;
       case "generate_audio":
         result = await generateAudio(input as GenerateAudioInput);
+        break;
+      case "render_video":
+        result = await renderVideo(input as RenderVideoInput);
         break;
       default:
         throw new Error(`Outil inconnu : ${name}`);

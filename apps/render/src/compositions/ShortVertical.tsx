@@ -1,4 +1,4 @@
-import { AbsoluteFill, useCurrentFrame, interpolate } from "remotion";
+import { AbsoluteFill, Audio, useCurrentFrame, interpolate } from "remotion";
 import { COLORS } from "../lib/theme";
 import { Background } from "../components/Background";
 import { AnimatedQuote } from "../components/AnimatedQuote";
@@ -12,11 +12,13 @@ export type ShortVerticalProps = {
     work?: string;
   };
   brand?: string;
+  audioUrl?: string;
 } & Record<string, unknown>;
 
 export const ShortVertical: React.FC<ShortVerticalProps> = ({
   citation,
   brand = "Passion_Coran",
+  audioUrl,
 }) => {
   const frame = useCurrentFrame();
 
@@ -40,6 +42,7 @@ export const ShortVertical: React.FC<ShortVerticalProps> = ({
   return (
     <AbsoluteFill>
       <Background variant="navy" />
+      {audioUrl ? <Audio src={audioUrl} /> : null}
 
       {/* Brand en haut */}
       <div

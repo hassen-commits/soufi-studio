@@ -1,5 +1,6 @@
 import { Composition } from "remotion";
 import { z } from "zod";
+import { getAudioDurationInSeconds } from "@remotion/media-utils";
 import { ShortVertical, type ShortVerticalProps } from "./compositions/ShortVertical";
 import { PodcastLong, type PodcastLongProps } from "./compositions/PodcastLong";
 import { FPS, SHORT_DIMENSIONS, LONG_DIMENSIONS } from "./lib/theme";
@@ -16,6 +17,7 @@ const shortSchema = z.object({
     work: z.string().optional(),
   }),
   brand: z.string().optional(),
+  audioUrl: z.string().optional(),
 });
 
 const longSchema = z.object({
@@ -24,7 +26,23 @@ const longSchema = z.object({
   author: z.string().optional(),
   brand: z.string().optional(),
   themeFr: z.string().optional(),
+  audioUrl: z.string().optional(),
 });
+
+// Si audioUrl fourni → durée vidéo = durée audio (avec petit fade out)
+// Sinon → durée par défaut
+async function durationFromAudio(
+  audioUrl: string | undefined,
+  defaultSeconds: number,
+): Promise<number> {
+  if (!audioUrl) return defaultSeconds * FPS;
+  try {
+    const sec = await getAudioDurationInSeconds(audioUrl);
+    return Math.ceil((sec + 0.5) * FPS);
+  } catch {
+    return defaultSeconds * FPS;
+  }
+}
 
 export const Root: React.FC = () => {
   return (
@@ -45,6 +63,9 @@ export const Root: React.FC = () => {
           },
           brand: "Passion_Coran",
         }}
+        calculateMetadata={async ({ props }) => ({
+          durationInFrames: await durationFromAudio(props.audioUrl, 12),
+        })}
       />
 
       <Composition<typeof longSchema, PodcastLongProps>
@@ -62,6 +83,9 @@ export const Root: React.FC = () => {
           brand: "Passion_Coran",
           themeFr: "L'âme et la lampe du cœur",
         }}
+        calculateMetadata={async ({ props }) => ({
+          durationInFrames: await durationFromAudio(props.audioUrl, 10),
+        })}
       />
     </>
   );

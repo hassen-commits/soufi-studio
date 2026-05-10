@@ -29,6 +29,9 @@ importers:
       '@remotion/google-fonts':
         specifier: ^4.0.243
         version: 4.0.459(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@remotion/media-utils':
+        specifier: ^4.0.243
+        version: 4.0.459(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@soufi/content':
         specifier: workspace:*
         version: link:../../packages/content
@@ -3920,7 +3923,7 @@ snapshots:
       react-refresh: 0.18.0
       remotion: 4.0.459(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       source-map: 0.7.3
-      style-loader: 4.0.0(webpack@5.105.0)
+      style-loader: 4.0.0(webpack@5.105.0(esbuild@0.25.0)(postcss@8.5.10))
       webpack: 5.105.0(esbuild@0.25.0)(postcss@8.5.10)
     transitivePeerDependencies:
       - '@minify-html/node'
@@ -6518,7 +6521,7 @@ snapshots:
 
   strip-json-comments@5.0.3: {}
 
-  style-loader@4.0.0(webpack@5.105.0):
+  style-loader@4.0.0(webpack@5.105.0(esbuild@0.25.0)(postcss@8.5.10)):
     dependencies:
       webpack: 5.105.0(esbuild@0.25.0)(postcss@8.5.10)
 
