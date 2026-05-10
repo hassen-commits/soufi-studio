@@ -6,6 +6,8 @@ import { env } from "./env.js";
 import { logger } from "./lib/logger.js";
 import { chatRoute } from "./routes/chat.js";
 import { podcastRoute } from "./routes/podcast.js";
+import { adminRoute } from "./routes/admin.js";
+import { startCronJobs } from "./jobs/index.js";
 
 const app = new Hono();
 
@@ -22,7 +24,14 @@ app.get("/", (c) =>
     service: "soufi-studio-backend",
     version: "0.1.0",
     status: "ok",
-    routes: ["GET /", "GET /health", "POST /chat", "POST /podcast"],
+    cron_enabled: env.CRON_ENABLED,
+    routes: [
+      "GET  /",
+      "GET  /health",
+      "POST /chat",
+      "POST /podcast",
+      "GET  /admin/* (Bearer token required if ADMIN_TOKEN set)",
+    ],
   }),
 );
 
@@ -32,6 +41,7 @@ app.get("/health", (c) =>
 
 app.route("/chat", chatRoute);
 app.route("/podcast", podcastRoute);
+app.route("/admin", adminRoute);
 
 app.use("/media/*", serveStatic({ root: "./" }));
 
@@ -40,4 +50,5 @@ serve({ fetch: app.fetch, port: env.PORT }, (info) => {
     { port: info.port, env: env.NODE_ENV, model: env.CLAUDE_MODEL },
     `Soufi Studio backend ready on http://localhost:${info.port}`,
   );
+  startCronJobs();
 });

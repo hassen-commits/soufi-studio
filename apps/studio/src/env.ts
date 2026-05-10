@@ -25,6 +25,12 @@ const schema = z.object({
   RESEND_API_KEY: z.string().startsWith("re_").optional(),
   NEWSLETTER_FROM: z.string().optional(),
   NEWSLETTER_TO: z.string().optional(),
+
+  // Cron + Admin
+  CRON_ENABLED: z.coerce.boolean().default(false),
+  CRON_TIMEZONE: z.string().default("Europe/Paris"),
+  ADMIN_TOKEN: z.string().min(16).optional(),
+  PUBLIC_BASE_URL: z.string().url().default("http://localhost:3001"),
 });
 
 const parsed = schema.safeParse(process.env);
