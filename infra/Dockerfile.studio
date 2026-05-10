@@ -1,0 +1,57 @@
+# =============================================================
+# apps/studio + apps/render (Hono backend + Remotion render)
+# =============================================================
+# Build:  docker build -f infra/Dockerfile.studio -t soufi-studio .
+# Run:    docker run -p 3001:3001 --env-file .env -v soufi-media:/app/apps/studio/media soufi-studio
+# =============================================================
+# Image lourde (~2 GB) car Remotion nécessite Chromium pour rendre les vidéos.
+# Le studio spawn `remotion render` directement, dans le même container.
+# =============================================================
+
+FROM node:22-bookworm-slim AS base
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+
+# Dépendances système pour Chromium (Remotion renderer)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 \
+    libc6 libcairo2 libcups2 libdbus-1-3 libdrm2 libexpat1 libfontconfig1 \
+    libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 \
+    libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 \
+    libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 \
+    libxrandr2 libxrender1 libxss1 libxtst6 lsb-release wget xdg-utils \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# ---------- Stage 1 : install deps ----------
+FROM base AS deps
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
+COPY apps/studio/package.json apps/studio/
+COPY apps/render/package.json apps/render/
+COPY packages/content/package.json packages/content/
+RUN pnpm install --frozen-lockfile --prod=false
+
+# ---------- Stage 2 : copie sources + warm Chromium ----------
+FROM deps AS build
+COPY apps/studio apps/studio/
+COPY apps/render apps/render/
+COPY packages/content packages/content/
+# Pré-installation du Chromium Remotion (évite le téléchargement au 1er render en prod)
+RUN cd apps/render && npx remotion browser ensure || true
+
+# ---------- Stage 3 : runtime ----------
+FROM build AS runtime
+ENV NODE_ENV=production
+ENV PORT=3001
+EXPOSE 3001
+
+# Volume pour les médias générés (mp3, mp4)
+VOLUME ["/app/apps/studio/media"]
+
+WORKDIR /app/apps/studio
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+# tsx en prod pour ne pas avoir à compiler — node-cron + Hono démarrent
+CMD ["pnpm", "exec", "tsx", "src/index.ts"]

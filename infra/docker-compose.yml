@@ -1,0 +1,66 @@
+# Docker compose pour test prod local OU déploiement self-hosted simple.
+# Pour Dokploy : utilise les Dockerfiles séparés (voir DEPLOYMENT.md).
+#
+# Lancer :   docker compose -f infra/docker-compose.yml up --build
+# Stopper :  docker compose -f infra/docker-compose.yml down
+
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+    image: soufi-web:local
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+    restart: unless-stopped
+    depends_on:
+      - studio
+
+  studio:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.studio
+    image: soufi-studio:local
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-ayJ26iqFFJdDB5V9wA0X}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4-6}
+      CRON_ENABLED: ${CRON_ENABLED:-true}
+      CRON_TIMEZONE: ${CRON_TIMEZONE:-Europe/Paris}
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3001}
+      YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID}
+      YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET}
+      YOUTUBE_REFRESH_TOKEN: ${YOUTUBE_REFRESH_TOKEN}
+      PUBLISH_WEBHOOK_URL: ${PUBLISH_WEBHOOK_URL}
+      PUBLISH_WEBHOOK_SECRET: ${PUBLISH_WEBHOOK_SECRET}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      NEWSLETTER_FROM: ${NEWSLETTER_FROM}
+      NEWSLETTER_TO: ${NEWSLETTER_TO}
+    volumes:
+      - soufi-media:/app/apps/studio/media
+    restart: unless-stopped
+
+volumes:
+  soufi-media:
+    driver: local

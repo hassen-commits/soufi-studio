@@ -1,0 +1,55 @@
+# =============================================================
+# apps/web (Next.js 15 standalone) — image production
+# =============================================================
+# Build:  docker build -f infra/Dockerfile.web -t soufi-web .
+# Run:    docker run -p 3000:3000 --env-file .env soufi-web
+# =============================================================
+
+FROM node:22-bookworm-slim AS base
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+WORKDIR /app
+
+# ---------- Stage 1 : install deps (avec cache lockfile) ----------
+FROM base AS deps
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
+COPY apps/web/package.json apps/web/
+COPY packages/content/package.json packages/content/
+COPY packages/db/package.json packages/db/
+RUN pnpm install --frozen-lockfile --prod=false
+
+# ---------- Stage 2 : build Next standalone ----------
+FROM deps AS build
+COPY apps/web apps/web/
+COPY packages/content packages/content/
+COPY packages/db packages/db/
+ENV NEXT_TELEMETRY_DISABLED=1
+# Les NEXT_PUBLIC_* doivent être passés au build (inline dans le bundle)
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+RUN pnpm --filter @soufi/web build
+
+# ---------- Stage 3 : runtime minimal ----------
+FROM node:22-bookworm-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+# Copie de l'output standalone (server.js + node_modules nécessaires)
+COPY --from=build /app/apps/web/.next/standalone ./
+COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build /app/apps/web/public ./apps/web/public
+
+# Le serveur s'attend à être lancé depuis apps/web
+WORKDIR /app/apps/web
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+CMD ["node", "server.js"]
