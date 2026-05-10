@@ -8,6 +8,20 @@ export const AUTHOR_LABEL: Record<AuthorKey, string> = {
   maitres_soufis: "Maîtres soufis",
 };
 
+// Valeur stockée dans metadata->>'author' en base (Supabase)
+export const AUTHOR_DB_VALUE: Record<AuthorKey, string> = {
+  rumi: "Rumi",
+  ibn_arabi: "Ibn Arabi",
+  ghazali: "Al-Ghazali",
+  tustari: "Sahl al-Tustari",
+  maitres_soufis: "Maîtres soufis",
+};
+
+// Inverse : DB value → AuthorKey (pour mapper les chunks)
+export const AUTHOR_KEY_BY_DB: Record<string, AuthorKey> = Object.fromEntries(
+  (Object.entries(AUTHOR_DB_VALUE) as [AuthorKey, string][]).map(([k, v]) => [v, k]),
+);
+
 export const MAITRES: Maitre[] = [
   {
     key: "rumi",

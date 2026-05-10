@@ -109,3 +109,25 @@ CREATE TABLE IF NOT EXISTS episodes (
 
 CREATE INDEX IF NOT EXISTS episodes_status_idx ON episodes (status);
 CREATE INDEX IF NOT EXISTS episodes_published_at_idx ON episodes (published_at DESC NULLS LAST);
+
+-- 8. RLS — patrimoine public, lecture libre du corpus chunks
+ALTER TABLE chunks ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read chunks" ON chunks;
+CREATE POLICY "Public read chunks"
+  ON chunks
+  FOR SELECT
+  USING (true);
+
+-- episodes : lecture publique uniquement des épisodes publiés
+ALTER TABLE episodes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read published episodes" ON episodes;
+CREATE POLICY "Public read published episodes"
+  ON episodes
+  FOR SELECT
+  USING (status = 'published' AND published_at IS NOT NULL);
+
+-- Les RPC match_chunks et search_chunks_text doivent être appelables par anon
+GRANT EXECUTE ON FUNCTION match_chunks TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION search_chunks_text TO anon, authenticated;

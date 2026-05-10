@@ -1,4 +1,6 @@
 import {
+  AUTHOR_DB_VALUE,
+  AUTHOR_KEY_BY_DB,
   AUTHOR_LABEL,
   citationSlug,
   type AuthorKey,
@@ -10,13 +12,14 @@ import { getSupabase } from "./client";
 const TABLE = "chunks";
 
 function chunkToCitation(c: Chunk): Citation {
-  const author = (c.metadata?.author ?? "maitres_soufis") as AuthorKey;
+  const dbAuthor = String(c.metadata?.author ?? "Maîtres soufis");
+  const author = (AUTHOR_KEY_BY_DB[dbAuthor] ?? "maitres_soufis") as AuthorKey;
   const lang = (c.metadata?.language ?? "fr") as Citation["language"];
   return {
     id: String(c.id),
     slug: citationSlug(c.content),
     author,
-    authorLabel: AUTHOR_LABEL[author] ?? String(author),
+    authorLabel: AUTHOR_LABEL[author] ?? dbAuthor,
     work: c.metadata?.work,
     workFr: c.metadata?.work_fr,
     language: lang,
@@ -24,6 +27,8 @@ function chunkToCitation(c: Chunk): Citation {
     themes: c.metadata?.theme,
   };
 }
+
+const MAIN_AUTHORS_DB = ["Rumi", "Ibn Arabi", "Al-Ghazali", "Sahl al-Tustari"] as const;
 
 export async function listCitations(opts?: {
   author?: AuthorKey;
@@ -36,12 +41,20 @@ export async function listCitations(opts?: {
 
   let query = supabase
     .from(TABLE)
-    .select("id, content, metadata, created_at")
+    .select("id, content, metadata")
     .range(offset, offset + limit - 1)
     .order("id", { ascending: true });
 
-  if (opts?.author) {
-    query = query.eq("metadata->>author", opts.author);
+  if (opts?.author === "maitres_soufis") {
+    // catégorie fourre-tout : tout ce qui n'est pas un des 4 grands maîtres
+    query = query.not(
+      "metadata->>author",
+      "in",
+      `(${MAIN_AUTHORS_DB.map((a) => `"${a}"`).join(",")})`,
+    );
+  } else if (opts?.author) {
+    const dbValue = AUTHOR_DB_VALUE[opts.author];
+    if (dbValue) query = query.eq("metadata->>author", dbValue);
   }
 
   const { data, error } = await query;
@@ -49,23 +62,39 @@ export async function listCitations(opts?: {
   return (data ?? []).map((row) => chunkToCitation(row as Chunk));
 }
 
-export async function countCitationsByAuthor(): Promise<Record<string, number>> {
+export async function countCitationsByAuthor(): Promise<Record<AuthorKey, number>> {
   const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select("metadata->author");
-  if (error) throw error;
-  const counts: Record<string, number> = {};
-  for (const row of data ?? []) {
-    const a = (row as { author?: string }).author ?? "maitres_soufis";
-    counts[a] = (counts[a] ?? 0) + 1;
-  }
+  const counts = {} as Record<AuthorKey, number>;
+
+  await Promise.all([
+    ...(Object.entries(AUTHOR_DB_VALUE) as [AuthorKey, string][])
+      .filter(([key]) => key !== "maitres_soufis")
+      .map(async ([key, dbValue]) => {
+        const { count } = await supabase
+          .from(TABLE)
+          .select("id", { count: "exact", head: true })
+          .eq("metadata->>author", dbValue);
+        counts[key] = count ?? 0;
+      }),
+    (async () => {
+      const { count } = await supabase
+        .from(TABLE)
+        .select("id", { count: "exact", head: true })
+        .not(
+          "metadata->>author",
+          "in",
+          `(${MAIN_AUTHORS_DB.map((a) => `"${a}"`).join(",")})`,
+        );
+      counts.maitres_soufis = count ?? 0;
+    })(),
+  ]);
+
   return counts;
 }
 
 export async function getRandomCitations(n = 6): Promise<Citation[]> {
   const supabase = getSupabase();
-  const { count } = await supabase.from(TABLE).select("*", { count: "exact", head: true });
+  const { count } = await supabase.from(TABLE).select("id", { count: "exact", head: true });
   if (!count) return [];
   const offset = Math.floor(Math.random() * Math.max(0, count - n));
   return listCitations({ limit: n, offset });
