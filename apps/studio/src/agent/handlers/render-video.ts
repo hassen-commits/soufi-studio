@@ -1,7 +1,9 @@
 import { spawn } from "node:child_process";
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile, unlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
 import { logger } from "../../lib/logger.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -34,18 +36,28 @@ export async function renderVideo(input: RenderVideoInput): Promise<RenderVideoO
     "render_video start",
   );
 
-  const propsJson = JSON.stringify(input.props);
+  // Écrire les props dans un fichier temporaire — évite tous les problèmes
+  // d'échappement shell des guillemets dans le JSON passé en ligne de commande
+  const propsFile = join(tmpdir(), `remotion-props-${randomUUID()}.json`);
+  await writeFile(propsFile, JSON.stringify(input.props), "utf8");
+
   const args = [
     "exec",
     "remotion",
     "render",
     input.composition,
     outputPath,
-    `--props=${propsJson}`,
+    `--props=${propsFile}`,
   ];
 
   const started = Date.now();
-  const result = await runProcess("pnpm", args, RENDER_DIR);
+  let result: ProcessResult;
+  try {
+    result = await runProcess("pnpm", args, RENDER_DIR);
+  } finally {
+    // Cleanup du fichier props temporaire
+    await unlink(propsFile).catch(() => undefined);
+  }
   const duration = Date.now() - started;
 
   if (result.code !== 0) {
