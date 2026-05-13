@@ -49,8 +49,10 @@ const argsSchema = z.object({
 type Args = z.infer<typeof argsSchema>;
 
 function parseCliArgs(): Args {
+  // pnpm script -- --foo bar transmet "--" comme premier arg → on le vire
+  const rawArgs = process.argv.slice(2).filter((a) => a !== "--");
   const { values } = parseArgs({
-    args: process.argv.slice(2),
+    args: rawArgs,
     options: {
       pdf: { type: "string" },
       author: { type: "string" },

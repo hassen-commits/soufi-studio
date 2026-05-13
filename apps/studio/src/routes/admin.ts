@@ -69,7 +69,46 @@ adminRoute.post("/run/weekly-production", async (c) => {
     const result = await runWeeklyProduction(parsed.data?.theme);
     return c.json({ ok: true, result });
   } catch (e) {
-    return c.json({ ok: false, error: String(e) }, 500);
+    return c.json({ ok: false, error: String(e), stack: e instanceof Error ? e.stack : undefined }, 500);
+  }
+});
+
+// Endpoint diagnostic — test direct d'un tool individuel pour isoler les plantages
+adminRoute.post("/test/tool", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const schema = z.object({
+    tool: z.enum(["rag_search", "translate_en_fr", "generate_audio", "transcribe_audio", "render_video"]),
+    input: z.record(z.unknown()),
+  });
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "invalid_body", details: parsed.error.flatten() }, 400);
+  }
+  const { tool, input } = parsed.data;
+  const { ragSearch } = await import("../agent/handlers/rag-search.js");
+  const { translateEnFr } = await import("../agent/handlers/translate.js");
+  const { generateAudio } = await import("../agent/handlers/audio.js");
+  const { transcribe } = await import("../agent/handlers/transcribe.js");
+  const { renderVideo } = await import("../agent/handlers/render-video.js");
+  const started = Date.now();
+  try {
+    let result: unknown;
+    switch (tool) {
+      case "rag_search":         result = await ragSearch(input as never); break;
+      case "translate_en_fr":    result = await translateEnFr(input as never); break;
+      case "generate_audio":     result = await generateAudio(input as never); break;
+      case "transcribe_audio":   result = await transcribe(input as never); break;
+      case "render_video":       result = await renderVideo(input as never); break;
+    }
+    return c.json({ ok: true, tool, duration_ms: Date.now() - started, result });
+  } catch (e) {
+    return c.json({
+      ok: false,
+      tool,
+      duration_ms: Date.now() - started,
+      error: String(e),
+      stack: e instanceof Error ? e.stack?.split("\n").slice(0, 10).join("\n") : undefined,
+    }, 500);
   }
 });
 
