@@ -60,9 +60,20 @@ export async function runWeeklyProduction(themeOverride?: {
       maxTurns: 24,
     });
 
+    // Décide du status en fonction de ce que l'agent a réussi à faire
+    const calledAudio = result.toolCalls.some((t) => t.name === "generate_audio");
+    const calledRender = result.toolCalls.some((t) => t.name === "render_video");
+    const hasScript = result.text && !result.text.startsWith("[L'agent");
+
+    let status: "script_ready" | "audio_ready" | "video_ready" | "failed";
+    if (calledRender) status = "video_ready";
+    else if (calledAudio) status = "audio_ready";
+    else if (hasScript) status = "script_ready";
+    else status = "failed";
+
     if (episode) {
       await updateEpisode(episode.id, {
-        status: "video_ready",
+        status,
         script_md: result.text,
       });
     }
@@ -71,6 +82,7 @@ export async function runWeeklyProduction(themeOverride?: {
       {
         episodeId: episode?.id,
         turns: result.turns,
+        status,
         toolCalls: result.toolCalls.map((t) => t.name),
       },
       "[weekly-production] done",

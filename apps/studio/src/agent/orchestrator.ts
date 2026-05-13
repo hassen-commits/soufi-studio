@@ -7,6 +7,7 @@ export interface AgentInput {
   systemPrompt: string;
   userMessage: string;
   maxTurns?: number;
+  maxTokens?: number;
 }
 
 export interface AgentOutput {
@@ -39,7 +40,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
 
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 4096,
+      max_tokens: input.maxTokens ?? 8192,
       system: [
         {
           type: "text",
@@ -94,6 +95,21 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
       const toolResults = await Promise.all(toolUses.map(executeTool));
       messages.push({ role: "assistant", content: response.content });
       messages.push({ role: "user", content: toolResults });
+      continue;
+    }
+
+    // max_tokens : Claude n'a pas eu la place de finir. On garde son output
+    // partiel et on lui demande poliment de continuer.
+    if (response.stop_reason === "max_tokens") {
+      logger.warn({ turn: turns }, "hit max_tokens, asking Claude to continue");
+      messages.push({ role: "assistant", content: response.content });
+      messages.push({
+        role: "user",
+        content:
+          "Continue exactement où tu t'es arrêté (ne répète rien). " +
+          "Termine ce que tu as commencé, puis enchaîne sur les étapes restantes " +
+          "(generate_audio si script complet, render_video si audio prêt).",
+      });
       continue;
     }
 
