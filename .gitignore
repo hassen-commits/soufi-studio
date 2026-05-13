@@ -46,3 +46,13 @@ out/
 # Misc
 .cache/
 coverage/
+
+# Pipeline outputs (debug runs)
+episode-*.json
+episode-*.log
+clean-ghazali.log
+web.log
+studio.log
+dev.log
+render-studio.log
+*.output
