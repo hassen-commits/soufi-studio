@@ -35,7 +35,7 @@ export const PodcastLong: React.FC<PodcastLongProps> = ({
 
   return (
     <AbsoluteFill>
-      <Background variant="navy" />
+      <Background variant="cosmos" />
       {audioUrl ? <Audio src={audioUrl} /> : null}
 
       {/* Brand en haut */}
