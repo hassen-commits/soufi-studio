@@ -118,12 +118,100 @@ export async function countCitationsByAuthor(): Promise<Record<AuthorKey, number
   return counts;
 }
 
+// Découverte par thème — le corpus n'ayant pas de tags `metadata.theme`,
+// on s'appuie sur un OR de `content ilike '%keyword%'`. Imparfait (faux positifs
+// possibles, dépend du vocabulaire FR/translit) mais suffisant pour une page
+// de découverte. À remplacer par pgvector + embedding du thème plus tard.
+function themeOrClause(keywords: string[]): string {
+  return keywords
+    .map((k) => `content.ilike.%${k.replace(/[%,]/g, "")}%`)
+    .join(",");
+}
+
+export async function listCitationsByTheme(
+  keywords: string[],
+  opts?: { limit?: number; offset?: number },
+): Promise<Citation[]> {
+  if (keywords.length === 0) return [];
+  const supabase = getSupabase();
+  const limit = opts?.limit ?? 24;
+  const offset = opts?.offset ?? 0;
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("id, content, metadata")
+    .or(themeOrClause(keywords))
+    .range(offset, offset + limit - 1)
+    .order("id", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((row) => chunkToCitation(row as Chunk));
+}
+
+export async function countCitationsByTheme(keywords: string[]): Promise<number> {
+  if (keywords.length === 0) return 0;
+  const supabase = getSupabase();
+  const { count, error } = await supabase
+    .from(TABLE)
+    .select("id", { count: "exact", head: true })
+    .or(themeOrClause(keywords));
+  if (error) throw error;
+  return count ?? 0;
+}
+
+// Sequential — Supabase timeout quand plusieurs counts `ilike OR` partent en
+// parallèle. Avec `revalidate=3600` côté Next, ce coût est payé 1× par heure.
+export async function countCitationsByThemeMap(
+  themes: Array<{ slug: string; keywords: string[] }>,
+): Promise<Record<string, number | null>> {
+  const out: Record<string, number | null> = {};
+  for (const t of themes) {
+    try {
+      out[t.slug] = await countCitationsByTheme(t.keywords);
+    } catch {
+      out[t.slug] = null;
+    }
+  }
+  return out;
+}
+
 export async function getRandomCitations(n = 6): Promise<Citation[]> {
   const supabase = getSupabase();
   const { count } = await supabase.from(TABLE).select("id", { count: "exact", head: true });
   if (!count) return [];
   const offset = Math.floor(Math.random() * Math.max(0, count - n));
   return listCitations({ limit: n, offset });
+}
+
+// ============================================================
+// Episodes — queries publiques (anon, RLS limite à status=published)
+// ============================================================
+
+export async function listPublishedEpisodes(opts?: {
+  limit?: number;
+}): Promise<EpisodeRow[]> {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("episodes")
+    .select("*")
+    .eq("status", "published")
+    .not("published_at", "is", null)
+    .order("published_at", { ascending: false })
+    .limit(opts?.limit ?? 50);
+  if (error) throw error;
+  return (data ?? []) as EpisodeRow[];
+}
+
+export async function getPublishedEpisode(slug: string): Promise<EpisodeRow | null> {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("episodes")
+    .select("*")
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+  if (error) throw error;
+  return (data as EpisodeRow) ?? null;
 }
 
 // ============================================================
