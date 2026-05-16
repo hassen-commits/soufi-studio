@@ -41,9 +41,15 @@ export async function renderVideo(input: RenderVideoInput): Promise<RenderVideoO
   const propsFile = join(tmpdir(), `remotion-props-${randomUUID()}.json`);
   await writeFile(propsFile, JSON.stringify(input.props), "utf8");
 
+  // Appel direct du binaire Remotion local (apps/render/node_modules/.bin/remotion)
+  // — évite la dépendance à pnpm/npx dans le PATH du process studio.
+  const remotionBin = resolve(
+    RENDER_DIR,
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "remotion.cmd" : "remotion",
+  );
   const args = [
-    "exec",
-    "remotion",
     "render",
     input.composition,
     outputPath,
@@ -53,7 +59,7 @@ export async function renderVideo(input: RenderVideoInput): Promise<RenderVideoO
   const started = Date.now();
   let result: ProcessResult;
   try {
-    result = await runProcess("pnpm", args, RENDER_DIR);
+    result = await runProcess(remotionBin, args, RENDER_DIR);
   } finally {
     // Cleanup du fichier props temporaire
     await unlink(propsFile).catch(() => undefined);
