@@ -23,7 +23,7 @@ export interface RenderVideoOutput {
   path: string;
   url: string;
   bytes: number;
-  duration_ms: number;
+  render_time_ms: number;
 }
 
 export async function renderVideo(input: RenderVideoInput): Promise<RenderVideoOutput> {
@@ -76,14 +76,14 @@ export async function renderVideo(input: RenderVideoInput): Promise<RenderVideoO
   const { stat } = await import("node:fs/promises");
   const fileStat = await stat(outputPath);
 
-  logger.info({ duration_ms: duration, bytes: fileStat.size }, "render_video done");
+  logger.info({ render_time_ms: duration, bytes: fileStat.size }, "render_video done");
 
   return {
     composition: input.composition,
     path: outputPath,
     url: `/media/${safeName}`,
     bytes: fileStat.size,
-    duration_ms: duration,
+    render_time_ms: duration,
   };
 }
 
