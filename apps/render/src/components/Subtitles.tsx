@@ -61,17 +61,22 @@ export const Subtitles: React.FC<Props> = ({
           fontFamily: "'Lato', sans-serif",
           fontWeight: 700,
           fontSize,
-          lineHeight: 1.2,
+          lineHeight: 1.3,
           color: textColor,
           textAlign: "center",
           textShadow:
             "0 6px 24px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.5)",
           maxWidth: width - paddingHorizontal * 2,
-          textTransform: "uppercase",
-          letterSpacing: "0.02em",
+          letterSpacing: "0.01em",
         }}
       >
-        <span style={{ borderBottom: `4px solid ${highlightColor}`, paddingBottom: 6 }}>
+        <span
+          style={{
+            borderBottom: `1.5px solid ${highlightColor}`,
+            paddingBottom: 4,
+            opacity: 0.95,
+          }}
+        >
           {active.text}
         </span>
       </div>
