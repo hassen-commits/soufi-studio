@@ -61,27 +61,65 @@ export async function runWeeklyProduction(themeOverride?: {
       maxTurns: 24,
     });
 
-    // Décide du status en fonction de ce que l'agent a réussi à faire
-    const calledAudio = result.toolCalls.some((t) => t.name === "generate_audio");
-    const calledRender = result.toolCalls.some((t) => t.name === "render_video");
+    // Décide du status en fonction de ce que l'agent a RÉUSSI (pas juste appelé).
+    // Avant : `calledRender = some(name === "render_video")` — un appel qui plante
+    // donnait quand même `video_ready`. Maintenant on vérifie `isError !== true`.
+    const audioOk = result.toolCalls.filter(
+      (t) => t.name === "generate_audio" && !t.isError,
+    );
+    const renderOk = result.toolCalls.filter(
+      (t) => t.name === "render_video" && !t.isError,
+    );
     const hasScript = result.text && !result.text.startsWith("[L'agent");
 
+    // Extrait les URLs depuis les résultats des tools réussis
+    type AudioResult = { url?: string };
+    type RenderResult = { composition?: string; url?: string };
+
+    const firstAudioUrl =
+      (audioOk[0]?.result as AudioResult | undefined)?.url ?? null;
+
+    const longRenders = renderOk.filter(
+      (t) => (t.result as RenderResult | undefined)?.composition === "PodcastLong",
+    );
+    const shortRenders = renderOk.filter(
+      (t) => (t.result as RenderResult | undefined)?.composition === "ShortVertical",
+    );
+
+    const videoLongUrl =
+      (longRenders[0]?.result as RenderResult | undefined)?.url ?? null;
+    const shortClipUrls = shortRenders
+      .map((t) => (t.result as RenderResult | undefined)?.url)
+      .filter((u): u is string => typeof u === "string" && u.length > 0);
+
     let status: "script_ready" | "audio_ready" | "video_ready" | "failed";
-    if (calledRender) status = "video_ready";
-    else if (calledAudio) status = "audio_ready";
+    if (longRenders.length > 0) status = "video_ready";
+    else if (audioOk.length > 0) status = "audio_ready";
     else if (hasScript) status = "script_ready";
     else status = "failed";
 
     if (episode) {
-      await updateEpisode(episode.id, {
+      const patch: Record<string, unknown> = {
         status,
         script_md: result.text,
-      });
+      };
+      if (firstAudioUrl) patch.audio_url = firstAudioUrl;
+      if (videoLongUrl) patch.video_long_url = videoLongUrl;
+      if (shortClipUrls.length > 0) patch.short_clip_urls = shortClipUrls;
+      await updateEpisode(episode.id, patch as Partial<typeof episode>);
     }
 
-    const toolCalls = result.toolCalls.map((t) => t.name);
+    const toolCalls = result.toolCalls.map((t) => `${t.name}${t.isError ? "(err)" : ""}`);
     logger.info(
-      { episodeId: episode?.id, turns: result.turns, status, toolCalls },
+      {
+        episodeId: episode?.id,
+        turns: result.turns,
+        status,
+        toolCalls,
+        audioUrl: firstAudioUrl,
+        videoLongUrl,
+        shortCount: shortClipUrls.length,
+      },
       "[weekly-production] done",
     );
 

@@ -10,6 +10,15 @@ export interface AgentInput {
   maxTokens?: number;
 }
 
+export interface ToolCallRecord {
+  name: string;
+  input: unknown;
+  /** Parsed JSON from the tool result. Undefined if the tool errored. */
+  result?: unknown;
+  /** True if the executor reported is_error (the tool threw). */
+  isError?: boolean;
+}
+
 export interface AgentOutput {
   text: string;
   turns: number;
@@ -17,7 +26,7 @@ export interface AgentOutput {
   outputTokens: number;
   cacheReadTokens: number;
   cacheCreationTokens: number;
-  toolCalls: { name: string; input: unknown }[];
+  toolCalls: ToolCallRecord[];
 }
 
 const MAX_TURNS_DEFAULT = 8;
@@ -33,7 +42,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
   let outputTokens = 0;
   let cacheReadTokens = 0;
   let cacheCreationTokens = 0;
-  const toolCalls: AgentOutput["toolCalls"] = [];
+  const toolCalls: ToolCallRecord[] = [];
 
   while (turns < maxTurns) {
     turns += 1;
@@ -89,10 +98,28 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
       const toolUses = response.content.filter(
         (b): b is Anthropic.Messages.ToolUseBlock => b.type === "tool_use",
       );
-      for (const tu of toolUses) {
-        toolCalls.push({ name: tu.name, input: tu.input });
-      }
       const toolResults = await Promise.all(toolUses.map(executeTool));
+
+      // Capture inputs ET résultats pour que les jobs en aval puissent
+      // récupérer les URLs/chemins générés (audio, vidéo, shorts) sans
+      // re-traverser tout le message log.
+      for (let i = 0; i < toolUses.length; i++) {
+        const tu = toolUses[i]!;
+        const tr = toolResults[i]!;
+        let parsed: unknown;
+        try {
+          parsed = typeof tr.content === "string" ? JSON.parse(tr.content) : tr.content;
+        } catch {
+          parsed = tr.content;
+        }
+        toolCalls.push({
+          name: tu.name,
+          input: tu.input,
+          result: parsed,
+          isError: tr.is_error === true,
+        });
+      }
+
       messages.push({ role: "assistant", content: response.content });
       messages.push({ role: "user", content: toolResults });
       continue;
