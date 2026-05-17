@@ -3,8 +3,12 @@ import { notFound } from "next/navigation";
 import { listCitationsByTheme, countCitationsByTheme } from "@soufi/db";
 import { CitationCard } from "@/components/citation-card";
 import { THEMES, getTheme } from "@/lib/themes";
+import { ogImageUrl } from "@/lib/og-url";
 
 export const revalidate = 600;
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://studio.iavance.fr";
 
 export async function generateStaticParams() {
   return THEMES.map((t) => ({ slug: t.slug }));
@@ -18,9 +22,20 @@ export async function generateMetadata({
   const { slug } = await params;
   const theme = getTheme(slug);
   if (!theme) return { title: "Thème" };
+  const og = ogImageUrl({
+    type: "theme",
+    title: theme.title,
+    subtitle: theme.desc,
+  });
   return {
     title: theme.title,
     description: theme.desc,
+    openGraph: {
+      type: "article",
+      url: `${SITE_URL}/themes/${slug}`,
+      images: [{ url: og, width: 1200, height: 630, alt: theme.title }],
+    },
+    twitter: { card: "summary_large_image", images: [og] },
   };
 }
 

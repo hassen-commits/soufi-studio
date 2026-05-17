@@ -1,8 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPublishedEpisode } from "@soufi/db";
+import { JsonLd } from "@/components/json-ld";
+import { ogImageUrl } from "@/lib/og-url";
 
 export const revalidate = 600;
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://studio.iavance.fr";
+
+function isoDuration(sec: number | null): string | undefined {
+  if (!sec) return undefined;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `PT${m}M${s}S`;
+}
 
 export async function generateMetadata({
   params,
@@ -13,9 +25,21 @@ export async function generateMetadata({
   try {
     const ep = await getPublishedEpisode(slug);
     if (!ep) return { title: "Épisode" };
+    const og = ogImageUrl({
+      type: "episode",
+      title: ep.title,
+      subtitle: ep.themes?.[0],
+      author: ep.authors?.[0],
+    });
     return {
       title: ep.title,
       description: ep.description ?? undefined,
+      openGraph: {
+        type: "video.other",
+        url: `${SITE_URL}/episodes/${slug}`,
+        images: [{ url: og, width: 1200, height: 630, alt: ep.title }],
+      },
+      twitter: { card: "summary_large_image", images: [og] },
     };
   } catch {
     return { title: "Épisode" };
@@ -49,6 +73,29 @@ export default async function EpisodeDetailPage({
 
   return (
     <article>
+      {ep.youtube_id ? (
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "VideoObject",
+            name: ep.title,
+            description: ep.description ?? undefined,
+            thumbnailUrl: `https://i.ytimg.com/vi/${ep.youtube_id}/maxresdefault.jpg`,
+            uploadDate: ep.published_at ?? ep.created_at,
+            duration: isoDuration(ep.duration_sec),
+            embedUrl: `https://www.youtube.com/embed/${ep.youtube_id}`,
+            contentUrl: `https://www.youtube.com/watch?v=${ep.youtube_id}`,
+            url: `${SITE_URL}/episodes/${ep.slug}`,
+            inLanguage: "fr",
+            publisher: {
+              "@type": "Organization",
+              name: "Soufi Studio",
+              url: SITE_URL,
+            },
+          }}
+        />
+      ) : null}
+
       <nav className="mb-8 text-center text-xs uppercase tracking-widest text-navy-400">
         <Link href="/episodes" className="hover:text-gold-dark">
           ← Tous les épisodes
