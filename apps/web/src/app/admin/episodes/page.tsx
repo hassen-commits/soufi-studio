@@ -1,5 +1,11 @@
 import Link from "next/link";
+import { revalidatePath } from "next/cache";
 import { adminListEpisodes, type EpisodeStatus } from "@soufi/db";
+import {
+  studioDeleteEpisode,
+  studioProduceEpisode,
+  studioSetPrivacy,
+} from "@/lib/studio-api";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +29,34 @@ const STATUS_COLOR: Record<EpisodeStatus, string> = {
 
 const ALL_STATUSES = Object.keys(STATUS_LABEL) as EpisodeStatus[];
 
+async function produceAction(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id"));
+  // Fire-and-forget : la prod prend 15-20 min, on n'attend pas la fin
+  studioProduceEpisode(id).catch(() => undefined);
+  revalidatePath("/admin/episodes");
+}
+
+async function setPrivacyAction(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id"));
+  const privacy = String(formData.get("privacy")) as
+    | "public"
+    | "unlisted"
+    | "private";
+  await studioSetPrivacy(id, privacy);
+  revalidatePath("/admin/episodes");
+  revalidatePath("/episodes");
+}
+
+async function deleteAction(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id"));
+  await studioDeleteEpisode(id);
+  revalidatePath("/admin/episodes");
+  revalidatePath("/episodes");
+}
+
 export default async function AdminEpisodes({
   searchParams,
 }: {
@@ -45,19 +79,24 @@ export default async function AdminEpisodes({
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="font-title text-4xl italic text-navy-700">Épisodes</h1>
-        <p className="mt-2 text-sm text-navy-500">
-          {episodes.length} résultat{episodes.length > 1 ? "s" : ""}
-          {statusFilter ? ` · filtré sur "${STATUS_LABEL[statusFilter]}"` : ""}
-        </p>
+      <header className="flex items-baseline justify-between">
+        <div>
+          <h1 className="font-title text-4xl italic text-navy-700">Épisodes</h1>
+          <p className="mt-2 text-sm text-navy-500">
+            {episodes.length} résultat{episodes.length > 1 ? "s" : ""}
+            {statusFilter ? ` · filtré sur "${STATUS_LABEL[statusFilter]}"` : ""}
+          </p>
+        </div>
+        <Link
+          href="/admin/produce"
+          className="rounded-sm bg-navy-700 px-4 py-2 text-xs uppercase tracking-widest text-parchment transition hover:bg-navy-500"
+        >
+          + Nouvel épisode
+        </Link>
       </header>
 
       <nav className="flex flex-wrap gap-2 text-sm">
-        <Link
-          href="/admin/episodes"
-          className={filterClass(!statusFilter)}
-        >
+        <Link href="/admin/episodes" className={filterClass(!statusFilter)}>
           Tous
         </Link>
         {ALL_STATUSES.map((s) => (
@@ -80,66 +119,41 @@ export default async function AdminEpisodes({
           Aucun épisode pour ce filtre.
         </p>
       ) : (
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-gold/30 text-left text-xs uppercase tracking-widest text-navy-500">
-              <th className="py-3 pr-4">Titre</th>
-              <th className="py-3 pr-4">Mode</th>
-              <th className="py-3 pr-4">Auteur(s)</th>
-              <th className="py-3 pr-4">Statut</th>
-              <th className="py-3 pr-4">Créé</th>
-              <th className="py-3 pr-4">Publié</th>
-              <th className="py-3">Liens</th>
-            </tr>
-          </thead>
-          <tbody>
-            {episodes.map((ep) => (
-              <tr key={ep.id} className="border-b border-gold/10 hover:bg-parchment/30">
-                <td className="py-3 pr-4">
-                  <div className="font-title text-base italic text-navy-700">{ep.title}</div>
-                  <div className="text-xs text-navy-400">{ep.slug}</div>
-                </td>
-                <td className="py-3 pr-4 text-xs text-navy-500">{ep.mode}</td>
-                <td className="py-3 pr-4 text-xs text-navy-500">
-                  {(ep.authors ?? []).join(", ") || "—"}
-                </td>
-                <td className="py-3 pr-4">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${STATUS_COLOR[ep.status]}`}
-                  >
-                    {STATUS_LABEL[ep.status]}
-                  </span>
-                </td>
-                <td className="py-3 pr-4 text-xs text-navy-400">
-                  {new Date(ep.created_at).toLocaleDateString("fr-FR")}
-                </td>
-                <td className="py-3 pr-4 text-xs text-navy-400">
-                  {ep.published_at
-                    ? new Date(ep.published_at).toLocaleDateString("fr-FR")
-                    : "—"}
-                </td>
-                <td className="py-3 text-xs">
-                  <div className="flex gap-3">
-                    {ep.audio_url ? (
-                      <a
-                        href={ep.audio_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-gold-dark hover:underline"
-                      >
-                        Audio
-                      </a>
-                    ) : null}
-                    {ep.video_long_url ? (
-                      <a
-                        href={ep.video_long_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-gold-dark hover:underline"
-                      >
-                        Vidéo
-                      </a>
-                    ) : null}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-gold/30 text-left text-xs uppercase tracking-widest text-navy-500">
+                <th className="py-3 pr-4">Titre</th>
+                <th className="py-3 pr-4">Auteur</th>
+                <th className="py-3 pr-4">Statut</th>
+                <th className="py-3 pr-4">Créé</th>
+                <th className="py-3 pr-4">YouTube</th>
+                <th className="py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {episodes.map((ep) => (
+                <tr key={ep.id} className="border-b border-gold/10 hover:bg-parchment/30">
+                  <td className="py-3 pr-4">
+                    <div className="font-title text-base italic text-navy-700">
+                      {ep.title}
+                    </div>
+                    <div className="text-xs text-navy-400">{ep.slug}</div>
+                  </td>
+                  <td className="py-3 pr-4 text-xs text-navy-500">
+                    {(ep.authors ?? []).join(", ") || "—"}
+                  </td>
+                  <td className="py-3 pr-4">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${STATUS_COLOR[ep.status]}`}
+                    >
+                      {STATUS_LABEL[ep.status]}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4 text-xs text-navy-400">
+                    {new Date(ep.created_at).toLocaleDateString("fr-FR")}
+                  </td>
+                  <td className="py-3 pr-4 text-xs">
                     {ep.youtube_id ? (
                       <a
                         href={`https://youtu.be/${ep.youtube_id}`}
@@ -147,15 +161,74 @@ export default async function AdminEpisodes({
                         rel="noreferrer"
                         className="text-gold-dark hover:underline"
                       >
-                        YouTube ↗
+                        {ep.youtube_id} ↗
                       </a>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    ) : (
+                      <span className="text-navy-300">—</span>
+                    )}
+                  </td>
+                  <td className="py-3 text-xs">
+                    <div className="flex flex-wrap gap-1.5">
+                      {ep.status === "planned" || ep.status === "failed" ? (
+                        <form action={produceAction}>
+                          <input type="hidden" name="id" value={ep.id} />
+                          <button
+                            type="submit"
+                            className="rounded border border-blue-300 bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                            title="Lance le script + audio + render (~15-20 min)"
+                          >
+                            ▶ Produire
+                          </button>
+                        </form>
+                      ) : null}
+
+                      {ep.youtube_id ? (
+                        <>
+                          {ep.status !== "published" ? (
+                            <form action={setPrivacyAction}>
+                              <input type="hidden" name="id" value={ep.id} />
+                              <input type="hidden" name="privacy" value="public" />
+                              <button
+                                type="submit"
+                                className="rounded border border-green-300 bg-green-50 px-2 py-1 text-xs text-green-700 hover:bg-green-100"
+                                title="Bascule la vidéo YouTube en public et publie sur le site"
+                              >
+                                🌐 Public
+                              </button>
+                            </form>
+                          ) : (
+                            <form action={setPrivacyAction}>
+                              <input type="hidden" name="id" value={ep.id} />
+                              <input type="hidden" name="privacy" value="unlisted" />
+                              <button
+                                type="submit"
+                                className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-700 hover:bg-amber-100"
+                                title="Repasser la vidéo en non répertoriée"
+                              >
+                                🔒 Unlisted
+                              </button>
+                            </form>
+                          )}
+                        </>
+                      ) : null}
+
+                      <form action={deleteAction}>
+                        <input type="hidden" name="id" value={ep.id} />
+                        <button
+                          type="submit"
+                          className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                          title="Supprimer la ligne en DB (la vidéo YouTube reste, à supprimer manuellement)"
+                        >
+                          🗑️
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
