@@ -56,3 +56,8 @@ studio.log
 dev.log
 render-studio.log
 *.output
+
+# Claude Code session data + render work files
+.claude/
+apps/render/.tmp-props.json
+apps/render/out/
