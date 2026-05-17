@@ -65,6 +65,48 @@ export async function findReadyToPublish(): Promise<EpisodeRow | null> {
   return ((data ?? [])[0] as EpisodeRow | undefined) ?? null;
 }
 
+export async function getEpisode(id: string): Promise<EpisodeRow | null> {
+  const { data, error } = await supabase
+    .from("episodes")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as EpisodeRow) ?? null;
+}
+
+export async function createPlannedEpisode(input: {
+  slug: string;
+  title: string;
+  description?: string;
+  themeFr?: string;
+  author?: string;
+}): Promise<EpisodeRow> {
+  const row = {
+    slug: input.slug,
+    title: input.title,
+    description: input.description ?? null,
+    mode: "podcast",
+    status: "planned" as const,
+    authors: input.author ? [input.author] : [],
+    themes: input.themeFr ? [input.themeFr] : [],
+    citation_ids: [],
+    short_clip_urls: [],
+  };
+  const { data, error } = await supabase
+    .from("episodes")
+    .insert(row)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as EpisodeRow;
+}
+
+export async function deleteEpisode(id: string): Promise<void> {
+  const { error } = await supabase.from("episodes").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export async function updateEpisode(
   id: string,
   patch: Partial<EpisodeRow>,

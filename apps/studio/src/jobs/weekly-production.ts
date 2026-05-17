@@ -2,6 +2,7 @@ import { runAgent } from "../agent/orchestrator.js";
 import { PODCAST_SYSTEM_PROMPT } from "../agent/prompts.js";
 import { findNextPlanned, updateEpisode } from "../lib/episodes.js";
 import { logger } from "../lib/logger.js";
+import { notifyAdminProductionDone } from "../lib/notify.js";
 
 export interface WeeklyResult {
   ran: boolean;
@@ -78,15 +79,21 @@ export async function runWeeklyProduction(themeOverride?: {
       });
     }
 
+    const toolCalls = result.toolCalls.map((t) => t.name);
     logger.info(
-      {
-        episodeId: episode?.id,
-        turns: result.turns,
-        status,
-        toolCalls: result.toolCalls.map((t) => t.name),
-      },
+      { episodeId: episode?.id, turns: result.turns, status, toolCalls },
       "[weekly-production] done",
     );
+
+    // Notification admin : email "à valider" si on a atteint video_ready
+    if (status === "video_ready" && episode) {
+      notifyAdminProductionDone({
+        episodeId: episode.id,
+        title: episode.title,
+        status,
+        toolCalls,
+      }).catch(() => undefined);
+    }
 
     return { ran: true, episodeId: episode?.id, text: result.text };
   } catch (error) {

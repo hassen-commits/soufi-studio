@@ -27,7 +27,12 @@ const schema = z.object({
   NEWSLETTER_TO: z.string().optional(),
 
   // Cron + Admin
-  CRON_ENABLED: z.coerce.boolean().default(false),
+  // Important : NE PAS utiliser z.coerce.boolean() — Boolean("false") = true
+  // (toute string non vide est truthy). On parse manuellement.
+  CRON_ENABLED: z
+    .union([z.string(), z.boolean()])
+    .default(false)
+    .transform((v) => v === true || v === "true" || v === "1"),
   CRON_TIMEZONE: z.string().default("Europe/Paris"),
   ADMIN_TOKEN: z.string().min(16).optional(),
   PUBLIC_BASE_URL: z.string().url().default("http://localhost:3001"),

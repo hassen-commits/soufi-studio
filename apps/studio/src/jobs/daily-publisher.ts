@@ -1,6 +1,5 @@
 import { findReadyToPublish, updateEpisode } from "../lib/episodes.js";
 import { publishYoutube } from "../agent/handlers/publish-youtube.js";
-import { publishWebhook } from "../agent/handlers/publish-webhook.js";
 import { logger } from "../lib/logger.js";
 
 export interface DailyResult {
@@ -38,31 +37,26 @@ export async function runDailyPublisher(): Promise<DailyResult> {
   }
 
   try {
+    // Publication en `unlisted` par défaut : l'humain valide visuellement
+    // puis bascule en public via POST /admin/episodes/:id/privacy.
+    // Évite qu'un rendu cassé/halluciné parte en public direct.
     const yt = await publishYoutube({
       video_path: videoPath,
       title: episode.title,
       description:
         (episode.description ?? "") +
         `\n\n— Soufi Studio · Passion_Coran\nhttps://studio.iavance.fr/episodes/${episode.slug}`,
-      privacy: "public",
+      privacy: "unlisted",
       is_short: isShort,
     });
 
-    // Cross-post sur réseaux (webhook configurable)
-    try {
-      await publishWebhook({
-        channel: isShort ? "tiktok" : "twitter",
-        text: episode.title,
-        media_url: yt.url,
-      });
-    } catch (e) {
-      logger.warn({ err: String(e) }, "[daily-publisher] webhook cross-post failed (non-blocking)");
-    }
+    // Pas de cross-post automatique tant que la vidéo est unlisted.
+    // À déclencher après bascule en public.
 
     await updateEpisode(episode.id, {
-      status: "published",
+      // status reste 'video_ready' — il passera à 'published' quand l'humain
+      // bascule la vidéo en public via /admin/episodes/:id/privacy
       youtube_id: yt.videoId,
-      published_at: new Date().toISOString(),
     });
 
     logger.info(
