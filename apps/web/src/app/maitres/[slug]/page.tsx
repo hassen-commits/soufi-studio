@@ -38,7 +38,15 @@ export default async function MaitrePage({
       </header>
 
       <section className="mx-auto max-w-prose">
-        <p className="text-base leading-relaxed text-navy-700">{maitre.bio}</p>
+        {maitre.bioLong ? (
+          <div className="space-y-5 text-base leading-relaxed text-navy-700">
+            {maitre.bioLong.split(/\n{2,}/).map((para, i) => (
+              <p key={i}>{para.trim()}</p>
+            ))}
+          </div>
+        ) : (
+          <p className="text-base leading-relaxed text-navy-700">{maitre.bio}</p>
+        )}
 
         {maitre.works.length > 0 ? (
           <>

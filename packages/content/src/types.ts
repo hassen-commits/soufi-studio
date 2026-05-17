@@ -51,7 +51,13 @@ export interface Maitre {
   birth?: number;
   death?: number;
   origin: string;
+  /** Bio courte (1 paragraphe) pour les cartes et l'OG. */
   bio: string;
+  /**
+   * Bio longue, prose libre. Les paragraphes sont séparés par une ligne vide
+   * (\n\n). Optionnel : si absent, on retombe sur `bio`.
+   */
+  bioLong?: string;
   works: { title: string; titleFr?: string; year?: number }[];
   imageUrl?: string;
   citationCount?: number;
