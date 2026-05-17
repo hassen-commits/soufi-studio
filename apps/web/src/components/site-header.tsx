@@ -25,6 +25,13 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
+          <Link
+            href="/recherche"
+            aria-label="Rechercher dans le corpus"
+            className="font-body text-navy-500 transition hover:text-gold-dark"
+          >
+            ⌕
+          </Link>
         </nav>
       </div>
     </header>

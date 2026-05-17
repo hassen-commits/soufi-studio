@@ -159,6 +159,39 @@ export async function countCitationsByTheme(keywords: string[]): Promise<number>
   return count ?? 0;
 }
 
+export async function searchCitations(
+  query: string,
+  opts?: { limit?: number; offset?: number },
+): Promise<Citation[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const supabase = getSupabase();
+  const limit = opts?.limit ?? 24;
+  const offset = opts?.offset ?? 0;
+  const safe = q.replace(/[%,]/g, "");
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("id, content, metadata")
+    .ilike("content", `%${safe}%`)
+    .range(offset, offset + limit - 1)
+    .order("id", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => chunkToCitation(row as Chunk));
+}
+
+export async function countCitationsMatching(query: string): Promise<number> {
+  const q = query.trim();
+  if (q.length < 2) return 0;
+  const supabase = getSupabase();
+  const safe = q.replace(/[%,]/g, "");
+  const { count, error } = await supabase
+    .from(TABLE)
+    .select("id", { count: "exact", head: true })
+    .ilike("content", `%${safe}%`);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 // Sequential — Supabase timeout quand plusieurs counts `ilike OR` partent en
 // parallèle. Avec `revalidate=3600` côté Next, ce coût est payé 1× par heure.
 export async function countCitationsByThemeMap(
