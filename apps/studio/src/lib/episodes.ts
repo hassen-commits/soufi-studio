@@ -55,10 +55,14 @@ export async function findNextPlanned(): Promise<EpisodeRow | null> {
 }
 
 export async function findReadyToPublish(): Promise<EpisodeRow | null> {
+  // Filtre `youtube_id IS NULL` pour éviter de re-uploader un épisode déjà
+  // poussé sur YouTube. Le statut reste "video_ready" après upload jusqu'à
+  // ce que l'humain bascule en public via /admin/episodes/:id/privacy.
   const { data, error } = await supabase
     .from("episodes")
     .select("*")
     .eq("status", "video_ready")
+    .is("youtube_id", null)
     .order("created_at", { ascending: true })
     .limit(1);
   if (error) throw error;
