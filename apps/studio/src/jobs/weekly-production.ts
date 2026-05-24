@@ -1,6 +1,6 @@
 import { runAgent } from "../agent/orchestrator.js";
 import { PODCAST_SYSTEM_PROMPT } from "../agent/prompts.js";
-import { findNextPlanned, updateEpisode } from "../lib/episodes.js";
+import { findNextPlanned, getEpisode, updateEpisode } from "../lib/episodes.js";
 import { logger } from "../lib/logger.js";
 import { notifyAdminProductionDone } from "../lib/notify.js";
 
@@ -17,12 +17,18 @@ export interface WeeklyResult {
  *
  * À planifier le dimanche 22h Europe/Paris pour publication lundi matin.
  */
-export async function runWeeklyProduction(themeOverride?: {
-  title: string;
-  themeFr?: string;
-  author?: string;
-}): Promise<WeeklyResult> {
-  let episode = await findNextPlanned();
+export async function runWeeklyProduction(
+  themeOverride?: {
+    title: string;
+    themeFr?: string;
+    author?: string;
+  },
+  episodeId?: string,
+): Promise<WeeklyResult> {
+  // Si un episodeId précis est fourni → on cible CET épisode (cas du bouton
+  // "Produire" du dashboard). Sinon → on pioche le plus ancien planifié
+  // (cas du cron hebdomadaire automatique).
+  let episode = episodeId ? await getEpisode(episodeId) : await findNextPlanned();
   let theme: { title: string; themeFr?: string; author?: string };
 
   if (themeOverride) {

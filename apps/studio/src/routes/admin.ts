@@ -101,11 +101,16 @@ adminRoute.post("/episodes/:id/produce", async (c) => {
   try {
     const ep = await getEpisode(id);
     if (!ep) return c.json({ error: "not_found" }, 404);
-    const result = await runWeeklyProduction({
-      title: ep.title,
-      themeFr: (ep.themes ?? [])[0],
-      author: (ep.authors ?? [])[0],
-    });
+    // On passe themeOverride ET episodeId pour que weekly-production cible
+    // l'épisode cliqué, pas le plus ancien planifié.
+    const result = await runWeeklyProduction(
+      {
+        title: ep.title,
+        themeFr: (ep.themes ?? [])[0],
+        author: (ep.authors ?? [])[0],
+      },
+      id,
+    );
     return c.json({ ok: true, result });
   } catch (e) {
     return c.json({ ok: false, error: String(e) }, 500);
