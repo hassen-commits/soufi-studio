@@ -22,7 +22,15 @@ export interface EpisodeRow {
   audio_url: string | null;
   video_long_url: string | null;
   short_clip_urls: string[] | null;
+  /** YouTube ID de la vidéo longue (PodcastLong, 16:9, ~3 min). */
   youtube_id: string | null;
+  /**
+   * YouTube IDs des shorts (ShortVertical, 9:16). Index aligné sur
+   * short_clip_urls : `short_youtube_ids[i]` correspond à `short_clip_urls[i]`.
+   * Un élément peut être null/undefined si ce short particulier n'est pas
+   * encore uploadé.
+   */
+  short_youtube_ids: string[] | null;
   duration_sec: number | null;
   published_at: string | null;
   created_at: string;
@@ -54,20 +62,48 @@ export async function findNextPlanned(): Promise<EpisodeRow | null> {
   return ((data ?? [])[0] as EpisodeRow | undefined) ?? null;
 }
 
-export async function findReadyToPublish(): Promise<EpisodeRow | null> {
-  // Filtre `youtube_id IS NULL` pour éviter de re-uploader un épisode déjà
-  // poussé sur YouTube. Le statut reste "video_ready" après upload jusqu'à
-  // ce que l'humain bascule en public via /admin/episodes/:id/privacy.
+/**
+ * Trouve le prochain épisode avec une VIDÉO LONGUE pas encore uploadée
+ * sur YouTube. Utilisé par daily-publisher dans son premier passage.
+ */
+export async function findReadyToPublishLong(): Promise<EpisodeRow | null> {
   const { data, error } = await supabase
     .from("episodes")
     .select("*")
     .eq("status", "video_ready")
+    .not("video_long_url", "is", null)
     .is("youtube_id", null)
     .order("created_at", { ascending: true })
     .limit(1);
   if (error) throw error;
   return ((data ?? [])[0] as EpisodeRow | undefined) ?? null;
 }
+
+/**
+ * Trouve le prochain épisode dont au moins UN short n'est pas encore
+ * uploadé (short_clip_urls plus long que short_youtube_ids). Utilisé
+ * par daily-publisher après que le long ait été uploadé.
+ */
+export async function findReadyToPublishShort(): Promise<EpisodeRow | null> {
+  const { data, error } = await supabase
+    .from("episodes")
+    .select("*")
+    .eq("status", "video_ready")
+    .not("short_clip_urls", "eq", "{}")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  // Filtre côté JS : on prend le 1er épisode dont short_clip_urls.length >
+  // short_youtube_ids.length (au moins un short pas encore uploadé).
+  for (const row of (data ?? []) as EpisodeRow[]) {
+    const shorts = row.short_clip_urls ?? [];
+    const uploaded = row.short_youtube_ids ?? [];
+    if (shorts.length > uploaded.length) return row;
+  }
+  return null;
+}
+
+// Alias rétro-compatible : pointe désormais sur la version LONG-only.
+export const findReadyToPublish = findReadyToPublishLong;
 
 export async function getEpisode(id: string): Promise<EpisodeRow | null> {
   const { data, error } = await supabase
