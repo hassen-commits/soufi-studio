@@ -69,6 +69,17 @@ export async function studioSetPrivacy(
   return res.json();
 }
 
+export async function studioPublishYoutube(id: string) {
+  const res = await fetch(`${STUDIO_URL}/admin/episodes/${id}/publish-youtube`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(`studio publishYoutube ${res.status}: ${await res.text()}`);
+  }
+  return res.json();
+}
+
 export async function studioDeleteEpisode(id: string) {
   const res = await fetch(`${STUDIO_URL}/admin/episodes/${id}`, {
     method: "DELETE",

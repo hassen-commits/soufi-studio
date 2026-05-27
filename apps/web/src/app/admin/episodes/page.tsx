@@ -4,6 +4,7 @@ import { adminListEpisodes, type EpisodeStatus } from "@soufi/db";
 import {
   studioDeleteEpisode,
   studioProduceEpisode,
+  studioPublishYoutube,
   studioSetPrivacy,
 } from "@/lib/studio-api";
 
@@ -47,6 +48,14 @@ async function setPrivacyAction(formData: FormData) {
   await studioSetPrivacy(id, privacy);
   revalidatePath("/admin/episodes");
   revalidatePath("/episodes");
+}
+
+async function publishAction(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id"));
+  // L'upload YouTube prend ~30-60s, on attend la fin avant revalidation
+  await studioPublishYoutube(id);
+  revalidatePath("/admin/episodes");
 }
 
 async function deleteAction(formData: FormData) {
@@ -178,6 +187,19 @@ export default async function AdminEpisodes({
                             title="Lance le script + audio + render (~15-20 min)"
                           >
                             ▶ Produire
+                          </button>
+                        </form>
+                      ) : null}
+
+                      {ep.status === "video_ready" && !ep.youtube_id ? (
+                        <form action={publishAction}>
+                          <input type="hidden" name="id" value={ep.id} />
+                          <button
+                            type="submit"
+                            className="rounded border border-purple-300 bg-purple-50 px-2 py-1 text-xs text-purple-700 hover:bg-purple-100"
+                            title="Upload du LONG sur YouTube (unlisted, ~30-60s)"
+                          >
+                            📤 Publier
                           </button>
                         </form>
                       ) : null}

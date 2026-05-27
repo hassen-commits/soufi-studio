@@ -14,6 +14,7 @@ import {
 } from "../lib/episodes.js";
 import { runWeeklyProduction } from "../jobs/weekly-production.js";
 import { runDailyPublisher } from "../jobs/daily-publisher.js";
+import { publishYoutube } from "../agent/handlers/publish-youtube.js";
 import { setVideoPrivacy, type PrivacyStatus } from "../lib/youtube-privacy.js";
 
 export const adminRoute = new Hono();
@@ -146,6 +147,66 @@ adminRoute.post("/episodes/:id/privacy", async (c) => {
       await updateEpisode(id, patch);
     }
     return c.json({ ok: true, youtube: result });
+  } catch (e) {
+    return c.json({ ok: false, error: String(e) }, 500);
+  }
+});
+
+// Upload sur YouTube de l'épisode spécifié : d'abord le LONG si pas encore
+// uploadé, sinon le prochain SHORT manquant. Reproduit la logique de
+// daily-publisher mais ciblée sur un épisode précis (bouton "Publier" du
+// dashboard).
+adminRoute.post("/episodes/:id/publish-youtube", async (c) => {
+  const id = c.req.param("id");
+  try {
+    const ep = await getEpisode(id);
+    if (!ep) return c.json({ error: "not_found" }, 404);
+
+    const descBase =
+      (ep.description ?? "") +
+      `\n\n— Soufi Studio · Passion_Coran\nhttps://studio.iavance.fr/episodes/${ep.slug}`;
+
+    // Phase 1 : LONG
+    if (ep.video_long_url && !ep.youtube_id) {
+      const yt = await publishYoutube({
+        video_path: ep.video_long_url,
+        title: ep.title,
+        description: descBase,
+        privacy: "unlisted",
+        is_short: false,
+      });
+      await updateEpisode(ep.id, { youtube_id: yt.videoId });
+      return c.json({ ok: true, type: "long", youtubeId: yt.videoId });
+    }
+
+    // Phase 2 : prochain SHORT manquant
+    const shorts = ep.short_clip_urls ?? [];
+    const uploadedIds = ep.short_youtube_ids ?? [];
+    const nextIdx = uploadedIds.length;
+    if (nextIdx < shorts.length) {
+      const videoPath = shorts[nextIdx];
+      if (!videoPath) {
+        return c.json({ error: "short_index_mismatch" }, 400);
+      }
+      const shortTitle = `${ep.title} · Short ${nextIdx + 1}`.slice(0, 100);
+      const yt = await publishYoutube({
+        video_path: videoPath,
+        title: shortTitle,
+        description: descBase,
+        privacy: "unlisted",
+        is_short: true,
+      });
+      const newShortIds = [...uploadedIds, yt.videoId];
+      await updateEpisode(ep.id, { short_youtube_ids: newShortIds });
+      return c.json({
+        ok: true,
+        type: "short",
+        shortIdx: nextIdx,
+        youtubeId: yt.videoId,
+      });
+    }
+
+    return c.json({ error: "nothing_to_upload" }, 400);
   } catch (e) {
     return c.json({ ok: false, error: String(e) }, 500);
   }
