@@ -31,7 +31,6 @@ const shortSchema = z.object({
 
 const longSchema = z.object({
   title: z.string(),
-  episodeNumber: z.number().optional(),
   author: z.string().optional(),
   brand: z.string().optional(),
   themeFr: z.string().optional(),
@@ -87,7 +86,6 @@ export const Root: React.FC = () => {
         height={LONG_DIMENSIONS.height}
         defaultProps={{
           title: "Le Voyage Intérieur",
-          episodeNumber: 1,
           author: "Rûmî",
           brand: "Passion_Coran",
           themeFr: "L'âme et la lampe du cœur",

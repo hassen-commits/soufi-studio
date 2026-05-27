@@ -241,7 +241,7 @@ export const TOOL_DEFS: Anthropic.Tool[] = [
           type: "object",
           description:
             "Props de la composition. Pour ShortVertical : { citation: { text, author, work? }, audioUrl? }. " +
-            "Pour PodcastLong : { title, episodeNumber?, author?, themeFr?, audioUrl? }. " +
+            "Pour PodcastLong : { title, author?, themeFr?, audioUrl? }. " +
             "Pour audioUrl, utiliser l'URL retournée par generate_audio préfixée par http://localhost:3001.",
         },
       },

@@ -5,7 +5,6 @@ import { GoldDivider } from "../components/GoldDivider";
 
 export type PodcastLongProps = {
   title: string;
-  episodeNumber?: number;
   author?: string;
   brand?: string;
   themeFr?: string;
@@ -14,7 +13,6 @@ export type PodcastLongProps = {
 
 export const PodcastLong: React.FC<PodcastLongProps> = ({
   title,
-  episodeNumber,
   author,
   brand = "Passion_Coran",
   themeFr,
@@ -66,22 +64,6 @@ export const PodcastLong: React.FC<PodcastLongProps> = ({
           paddingRight: 120,
         }}
       >
-        {episodeNumber !== undefined ? (
-          <div
-            style={{
-              opacity: titleOpacity,
-              fontFamily: "'Lato', sans-serif",
-              color: COLORS.gold,
-              fontSize: 28,
-              letterSpacing: "0.4em",
-              textTransform: "uppercase",
-              marginBottom: 40,
-            }}
-          >
-            Épisode {String(episodeNumber).padStart(2, "0")}
-          </div>
-        ) : null}
-
         <h1
           style={{
             opacity: titleOpacity,
