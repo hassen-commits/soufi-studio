@@ -40,16 +40,21 @@ const TABLE = "chunks";
 function chunkToCitation(c: Chunk): Citation {
   const dbAuthor = String(c.metadata?.author ?? "Maîtres soufis");
   const author = (AUTHOR_KEY_BY_DB[dbAuthor] ?? "maitres_soufis") as AuthorKey;
-  const lang = (c.metadata?.language ?? "fr") as Citation["language"];
+  const originalLang = (c.metadata?.language ?? "fr") as Citation["language"];
+  // Si content_fr est renseigné, on l'affiche en priorité (texte original
+  // anglais ou arabe traduit en français pour le site).
+  const displayText = c.content_fr && c.content_fr.trim().length > 0 ? c.content_fr : c.content;
+  const displayLang: Citation["language"] =
+    c.content_fr && c.content_fr.trim().length > 0 ? "fr" : originalLang;
   return {
     id: String(c.id),
-    slug: citationSlug(c.content),
+    slug: citationSlug(displayText),
     author,
     authorLabel: AUTHOR_LABEL[author] ?? dbAuthor,
     work: c.metadata?.work,
     workFr: c.metadata?.work_fr,
-    language: lang,
-    text: c.content,
+    language: displayLang,
+    text: displayText,
     themes: c.metadata?.theme,
   };
 }
@@ -67,7 +72,7 @@ export async function listCitations(opts?: {
 
   let query = supabase
     .from(TABLE)
-    .select("id, content, metadata")
+    .select("id, content, content_fr, metadata")
     .range(offset, offset + limit - 1)
     .order("id", { ascending: true });
 
@@ -139,7 +144,7 @@ export async function listCitationsByTheme(
 
   const { data, error } = await supabase
     .from(TABLE)
-    .select("id, content, metadata")
+    .select("id, content, content_fr, metadata")
     .or(themeOrClause(keywords))
     .range(offset, offset + limit - 1)
     .order("id", { ascending: true });
@@ -171,7 +176,7 @@ export async function searchCitations(
   const safe = q.replace(/[%,]/g, "");
   const { data, error } = await supabase
     .from(TABLE)
-    .select("id, content, metadata")
+    .select("id, content, content_fr, metadata")
     .ilike("content", `%${safe}%`)
     .range(offset, offset + limit - 1)
     .order("id", { ascending: true });
@@ -250,7 +255,7 @@ export async function getCitationOfTheDay(date?: Date): Promise<Citation | null>
   const supabase = getSupabase();
   const { data: pool, error: poolErr } = await supabase
     .from(TABLE)
-    .select("id, content, metadata")
+    .select("id, content, content_fr, metadata")
     .order("id", { ascending: true });
   if (poolErr) throw poolErr;
   const quotable = (pool ?? []).filter((row) =>

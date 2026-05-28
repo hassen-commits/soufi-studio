@@ -25,6 +25,12 @@ export interface ChunkMetadata {
 export interface Chunk {
   id: number | string;
   content: string;
+  /**
+   * Traduction française du `content` quand l'original est dans une autre
+   * langue. Populée par les scripts de traduction (ex. translate-tustari-chunks).
+   * Si présent, c'est ce texte qui doit être affiché sur le site.
+   */
+  content_fr?: string | null;
   metadata: ChunkMetadata;
   embedding?: number[];
   created_at?: string;
