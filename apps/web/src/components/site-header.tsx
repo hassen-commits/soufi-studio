@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 const NAV = [
+  { href: "/citation-du-jour", label: "Citation du jour" },
   { href: "/bibliotheque", label: "Bibliothèque" },
   { href: "/maitres", label: "Maîtres" },
   { href: "/episodes", label: "Épisodes" },

@@ -1,17 +1,31 @@
 import Link from "next/link";
 import { MAITRES, type Citation } from "@soufi/content";
-import { getRandomCitations, countCitationsByAuthor } from "@soufi/db";
+import {
+  getRandomCitations,
+  countCitationsByAuthor,
+  getCitationOfTheDay,
+} from "@soufi/db";
 import { CitationCard } from "@/components/citation-card";
 
 export const revalidate = 3600;
 
+function cleanText(s: string): string {
+  return s
+    .replace(/\t+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ ]{2,}/g, " ")
+    .trim();
+}
+
 export default async function HomePage() {
   let citations: Citation[] = [];
   let counts: Record<string, number> = {};
+  let citationDuJour: Citation | null = null;
   try {
-    [citations, counts] = await Promise.all([
+    [citations, counts, citationDuJour] = await Promise.all([
       getRandomCitations(6),
       countCitationsByAuthor(),
+      getCitationOfTheDay(),
     ]);
   } catch {
     // Pas de connexion Supabase configurée — on affiche le site sans les données
@@ -56,6 +70,36 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
+
+      {citationDuJour ? (
+        <section className="mx-auto max-w-3xl rounded-sm border border-gold/30 bg-white/70 px-8 py-12 text-center shadow-sm">
+          <p className="text-xs uppercase tracking-widest text-gold">Citation du jour</p>
+          <div className="mt-4 gold-divider" />
+          <p
+            className="citation-text mt-2 text-xl italic text-navy-700 md:text-2xl"
+            style={{ overflowWrap: "anywhere", lineHeight: 1.6 }}
+          >
+            « {cleanText(citationDuJour.text)} »
+          </p>
+          <div className="mt-6 mx-auto h-px w-20 bg-gold/40" />
+          <p className="mt-4 font-title text-xl italic text-gold-dark">
+            {citationDuJour.authorLabel}
+          </p>
+          {citationDuJour.workFr || citationDuJour.work ? (
+            <p className="mt-1 text-xs text-navy-400">
+              {citationDuJour.workFr ?? citationDuJour.work}
+            </p>
+          ) : null}
+          <div className="mt-6">
+            <Link
+              href="/citation-du-jour"
+              className="text-xs uppercase tracking-widest text-gold-dark hover:text-navy-700"
+            >
+              Voir en grand →
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       {citations.length > 0 ? (
         <section>

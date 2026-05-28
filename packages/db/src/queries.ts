@@ -208,6 +208,35 @@ export async function countCitationsByThemeMap(
   return out;
 }
 
+/**
+ * Citation du jour — déterministe par date : tout le monde voit la même
+ * citation le même jour. Rotation linéaire sur tout le corpus filtré par
+ * longueur "quotable" (80-500 caractères) pour éviter les fragments et
+ * les paragraphes trop longs.
+ */
+export async function getCitationOfTheDay(date?: Date): Promise<Citation | null> {
+  const supabase = getSupabase();
+  const { data: pool, error: poolErr } = await supabase
+    .from(TABLE)
+    .select("id, content, metadata")
+    .order("id", { ascending: true });
+  if (poolErr) throw poolErr;
+  const quotable = (pool ?? []).filter((row) => {
+    const text = String((row as Chunk).content ?? "");
+    const len = text.length;
+    return len >= 80 && len <= 500;
+  });
+  if (quotable.length === 0) return null;
+
+  const d = date ?? new Date();
+  const epoch = Date.UTC(2024, 0, 1);
+  const today = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  const daysSince = Math.floor((today - epoch) / 86400000);
+  const idx = ((daysSince % quotable.length) + quotable.length) % quotable.length;
+
+  return chunkToCitation(quotable[idx] as Chunk);
+}
+
 export async function getRandomCitations(n = 6): Promise<Citation[]> {
   const supabase = getSupabase();
   const { count } = await supabase.from(TABLE).select("id", { count: "exact", head: true });
