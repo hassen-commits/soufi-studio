@@ -10,6 +10,30 @@ export function generateStaticParams() {
   return MAITRES.map((m) => ({ slug: m.key }));
 }
 
+/**
+ * Rejette les chunks qui sont visiblement des artefacts d'OCR/édition :
+ * footnotes, références de manuscrits, pages d'index, fragments de
+ * bibliographie. Souvent concentré dans le corpus Tustarî (issu du PDF
+ * Keeler/Fons Vitae avec son apparat critique).
+ */
+function looksLikeNoise(text: string): boolean {
+  const t = text.trim();
+  // Commence par un numéro de footnote isolé (« 4 Again, it should... »)
+  if (/^\d{1,3}\s+[A-Z]/.test(t)) return true;
+  // Références à des manuscrits / folios / éditions critiques
+  if (/\bMSS?\b|\bf\.\s+\d|\bed\.\s|\bff\.\s+\d/.test(t)) return true;
+  if (/[A-Z]\d{2,4}[a-z]?\b/.test(t)) return true; // codes type Z515, F638a
+  // Pages d'index / glossaire : suite de termes séparés par virgules avec
+  // chiffres romains ou pages
+  if (/,\s+(?:[ivxlcd]+|\d+)(?:\s*,\s*(?:[ivxlcd]+|\d+))+/i.test(t)) return true;
+  // Mentions d'éditeur / institut = page biblio
+  if (/\b(Fons Vitae|de Gruyter|Brill|Royal Aal|Institute for Islamic)\b/.test(t)) return true;
+  // Crochets éditoriaux nombreux : « his [lower] self ... [completely] buries »
+  const bracketCount = (t.match(/\[[a-z]+\]/g) ?? []).length;
+  if (bracketCount >= 2) return true;
+  return false;
+}
+
 export default async function MaitrePage({
   params,
 }: {
@@ -21,7 +45,9 @@ export default async function MaitrePage({
 
   let citations: Citation[] = [];
   try {
-    citations = await listCitations({ author: maitre.key, limit: 12 });
+    // Fetch plus large + filtre anti-bruit, on garde les 12 premiers extraits propres.
+    const pool = await listCitations({ author: maitre.key, limit: 80 });
+    citations = pool.filter((c) => !looksLikeNoise(c.text)).slice(0, 12);
   } catch {
     // ignore
   }
