@@ -209,10 +209,42 @@ export async function countCitationsByThemeMap(
 }
 
 /**
+ * Heuristique "citation publiable" : on rejette tout chunk qui ressemble
+ * à un fragment d'extraction PDF (commence/finit mid-phrase, numéros de
+ * page, puces, mots coupés). Le corpus est issu de scans PDF donc beaucoup
+ * de chunks sont des passages bruts non-conclusifs.
+ */
+function isQuotable(text: string): boolean {
+  const t = text.trim();
+  const len = t.length;
+  if (len < 100 || len > 420) return false;
+  // Doit commencer par une majuscule ou un guillemet ouvrant — pas de mid-mot.
+  if (!/^[A-ZÀÂÉÈÊÎÔÙÇ«"„''(]/.test(t)) return false;
+  // Doit finir par une ponctuation de fin de phrase ou un guillemet fermant.
+  if (!/[.!?…»"']$/.test(t)) return false;
+  // Numéros (refs de page, notes de bas de page) — souvent des fragments scolaires.
+  if (/\b\d{1,4}\b/.test(t)) return false;
+  // Puces / séparateurs typographiques.
+  if (/[•●▪◦►▶◀※•·*]/.test(t)) return false;
+  // Détecte les mots cassés par OCR : trop de "mots" de 1-2 caractères qui
+  // ne sont pas des mots fonctionnels français courants.
+  const stopShort = new Set([
+    "à", "a", "y", "et", "le", "la", "de", "du", "un", "il", "en", "au",
+    "ce", "se", "te", "me", "ne", "on", "ou", "si", "sa", "ta", "ma", "tu",
+    "ai", "as", "es", "an", "ô", "ne", "ce", "où", "là",
+  ]);
+  const words = t.toLowerCase().split(/\s+/);
+  const orphans = words.filter(
+    (w) => w.length > 0 && w.length <= 2 && !stopShort.has(w.replace(/[^a-zà-ÿ]/gi, "")),
+  );
+  if (orphans.length > 1) return false;
+  return true;
+}
+
+/**
  * Citation du jour — déterministe par date : tout le monde voit la même
- * citation le même jour. Rotation linéaire sur tout le corpus filtré par
- * longueur "quotable" (80-500 caractères) pour éviter les fragments et
- * les paragraphes trop longs.
+ * citation le même jour. Rotation linéaire sur les chunks qui passent le
+ * filtre `isQuotable` (phrase complète, propre, sans artefact PDF).
  */
 export async function getCitationOfTheDay(date?: Date): Promise<Citation | null> {
   const supabase = getSupabase();
@@ -221,11 +253,9 @@ export async function getCitationOfTheDay(date?: Date): Promise<Citation | null>
     .select("id, content, metadata")
     .order("id", { ascending: true });
   if (poolErr) throw poolErr;
-  const quotable = (pool ?? []).filter((row) => {
-    const text = String((row as Chunk).content ?? "");
-    const len = text.length;
-    return len >= 80 && len <= 500;
-  });
+  const quotable = (pool ?? []).filter((row) =>
+    isQuotable(String((row as Chunk).content ?? "")),
+  );
   if (quotable.length === 0) return null;
 
   const d = date ?? new Date();
