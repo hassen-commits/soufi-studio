@@ -16,6 +16,7 @@ import { runWeeklyProduction } from "../jobs/weekly-production.js";
 import { runDailyPublisher } from "../jobs/daily-publisher.js";
 import { publishYoutube } from "../agent/handlers/publish-youtube.js";
 import { setVideoPrivacy, type PrivacyStatus } from "../lib/youtube-privacy.js";
+import { ragSynthesis, type MaitreKey } from "../lib/rag-synthesis.js";
 
 export const adminRoute = new Hono();
 
@@ -47,6 +48,7 @@ adminRoute.get("/", (c) =>
       "DELETE /admin/episodes/:id           (supprimer)",
       "POST   /admin/run/weekly-production",
       "POST   /admin/run/daily-publisher",
+      "POST   /admin/rag-query             (Q&A multi-maîtres avec synthèse Claude)",
     ],
   }),
 );
@@ -280,6 +282,40 @@ adminRoute.post("/test/tool", async (c) => {
       error: String(e),
       stack: e instanceof Error ? e.stack?.split("\n").slice(0, 10).join("\n") : undefined,
     }, 500);
+  }
+});
+
+// RAG Q&A : interroge le corpus pour plusieurs maîtres et fait synthétiser
+// la réponse par Claude avec citations sourcées [N].
+const MAITRE_VALUES = [
+  "rumi",
+  "ibn_arabi",
+  "ghazali",
+  "tustari",
+  "maitres_soufis",
+] as const;
+
+const ragBody = z.object({
+  question: z.string().min(8).max(500),
+  maitres: z.array(z.enum(MAITRE_VALUES)).optional(),
+  perMaitreLimit: z.number().int().min(1).max(8).optional(),
+});
+
+adminRoute.post("/rag-query", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const parsed = ragBody.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "invalid_body", details: parsed.error.flatten() }, 400);
+  }
+  try {
+    const result = await ragSynthesis({
+      question: parsed.data.question,
+      maitres: parsed.data.maitres as MaitreKey[] | undefined,
+      perMaitreLimit: parsed.data.perMaitreLimit,
+    });
+    return c.json({ ok: true, result });
+  } catch (e) {
+    return c.json({ ok: false, error: String(e) }, 500);
   }
 });
 

@@ -69,6 +69,47 @@ export async function studioSetPrivacy(
   return res.json();
 }
 
+export type MaitreKey =
+  | "rumi"
+  | "ibn_arabi"
+  | "ghazali"
+  | "tustari"
+  | "maitres_soufis";
+
+export interface RagSourceEntry {
+  index: number;
+  maitre: MaitreKey;
+  maitreLabel: string;
+  text: string;
+  work?: string;
+  similarity: number;
+}
+
+export interface RagSynthesisResult {
+  question: string;
+  maitres: MaitreKey[];
+  answer: string;
+  sources: RagSourceEntry[];
+  hitCountByMaitre: Record<MaitreKey, number>;
+}
+
+export async function studioRagQuery(input: {
+  question: string;
+  maitres?: MaitreKey[];
+  perMaitreLimit?: number;
+}): Promise<RagSynthesisResult> {
+  const res = await fetch(`${STUDIO_URL}/admin/rag-query`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`studio ragQuery ${res.status}: ${await res.text()}`);
+  }
+  const json = (await res.json()) as { result: RagSynthesisResult };
+  return json.result;
+}
+
 export async function studioPublishYoutube(id: string) {
   const res = await fetch(`${STUDIO_URL}/admin/episodes/${id}/publish-youtube`, {
     method: "POST",

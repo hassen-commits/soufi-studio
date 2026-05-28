@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin", label: "Vue d'ensemble" },
   { href: "/admin/episodes", label: "Épisodes" },
   { href: "/admin/produce", label: "Produire" },
+  { href: "/admin/rag", label: "RAG Q&A" },
 ];
 
 async function logoutAction() {

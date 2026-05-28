@@ -1,0 +1,43 @@
+@media print {
+  /* Page A4 avec marges raisonnables */
+  @page {
+    size: A4;
+    margin: 1.8cm 1.6cm;
+  }
+
+  /* Cache la chrome admin (header, formulaire, boutons) */
+  .rag-no-print,
+  header[class*="border-b"],
+  nav,
+  .rag-no-print * {
+    display: none !important;
+  }
+
+  /* Forcer le fond blanc */
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Maximiser la largeur du document */
+  main,
+  .rag-print-doc {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Éviter de couper les blocs sources en plein milieu */
+  .rag-print-doc ol > li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Liens : afficher l'URL pour les exports physiques */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    color: #666;
+  }
+}
