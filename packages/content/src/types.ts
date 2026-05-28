@@ -59,6 +59,18 @@ export interface Maitre {
    */
   bioLong?: string;
   works: { title: string; titleFr?: string; year?: number }[];
+  /**
+   * Bibliographie secondaire : éditions critiques, traductions, monographies
+   * académiques recommandées. Pour orienter le lecteur vers les sources.
+   */
+  bibliography?: {
+    author: string;
+    title: string;
+    publisher?: string;
+    year?: number;
+    lang?: "fr" | "en" | "ar";
+    note?: string;
+  }[];
   imageUrl?: string;
   citationCount?: number;
 }

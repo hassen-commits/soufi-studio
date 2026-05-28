@@ -114,6 +114,40 @@ Mort en 896 à Bassora, où il s'était retiré, Tustarî reste pour la traditio
     works: [
       { title: "Tafsîr al-Tustarî", titleFr: "Commentaire ésotérique du Coran" },
     ],
+    bibliography: [
+      {
+        author: "Sahl al-Tustarî",
+        title: "Tafsîr al-Tustarî",
+        publisher: "Dār al-Kutub al-ʿIlmiyya, Beyrouth (éd. Muḥammad Bāsil ʿUyūn al-Sūd)",
+        year: 2002,
+        lang: "ar",
+        note: "Édition arabe de référence. Aussi disponible sur archive.org et shamela.ws.",
+      },
+      {
+        author: "Annabel & Ali Keeler (trad.)",
+        title: "Tafsīr al-Tustarī",
+        publisher: "Fons Vitae / Royal Aal al-Bayt Institute — Great Commentaries on the Holy Qurʾan",
+        year: 2011,
+        lang: "en",
+        note: "Traduction anglaise académique intégrale. Lisible en ligne sur altafsir.com.",
+      },
+      {
+        author: "Paul Nwyia",
+        title: "Exégèse coranique et langage mystique",
+        publisher: "Dar el-Machreq, Beyrouth",
+        year: 1970,
+        lang: "fr",
+        note: "Chapitres entiers sur Tustarî avec longs extraits traduits et commentés — la porte d'entrée en français.",
+      },
+      {
+        author: "Gerhard Böwering",
+        title: "The Mystical Vision of Existence in Classical Islam: The Quranic Hermeneutics of the Sūfī Sahl al-Tustarī",
+        publisher: "de Gruyter",
+        year: 1980,
+        lang: "en",
+        note: "La monographie de référence en anglais sur la pensée de Tustarî.",
+      },
+    ],
   },
   {
     key: "maitres_soufis",

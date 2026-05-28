@@ -64,6 +64,52 @@ export default async function MaitrePage({
             </ul>
           </>
         ) : null}
+
+        {maitre.bibliography && maitre.bibliography.length > 0 ? (
+          <>
+            <div className="gold-divider" />
+            <h2 className="text-center font-title text-2xl italic text-navy-700">
+              Pour aller plus loin
+            </h2>
+            <p className="mt-2 text-center text-xs uppercase tracking-widest text-navy-400">
+              Éditions, traductions et études de référence
+            </p>
+            <ul className="mt-8 space-y-6">
+              {maitre.bibliography.map((b, i) => (
+                <li
+                  key={i}
+                  className="rounded-sm border-l-2 border-gold/40 bg-white/40 px-5 py-4"
+                >
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="text-sm font-semibold text-navy-700">
+                      {b.author}
+                    </span>
+                    {b.lang ? (
+                      <span className="rounded-full bg-parchment/60 px-2 py-0.5 text-[10px] uppercase tracking-widest text-gold-dark">
+                        {b.lang === "fr" ? "français" : b.lang === "en" ? "anglais" : "arabe"}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 font-title text-lg italic text-navy-700">
+                    {b.title}
+                  </p>
+                  {b.publisher || b.year ? (
+                    <p className="mt-1 text-xs text-navy-500">
+                      {b.publisher}
+                      {b.publisher && b.year ? ", " : ""}
+                      {b.year}
+                    </p>
+                  ) : null}
+                  {b.note ? (
+                    <p className="mt-2 text-sm leading-relaxed text-navy-600">
+                      {b.note}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
       </section>
 
       <div className="gold-divider" />
