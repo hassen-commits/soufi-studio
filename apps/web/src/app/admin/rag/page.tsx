@@ -37,7 +37,7 @@ function renderAnswerWithRefs(answer: string): React.ReactNode {
   const parts = answer.split(/(\[[0-9,\s]+\])/g);
   return parts.map((part, i) => {
     const m = part.match(/^\[([0-9,\s]+)\]$/);
-    if (m) {
+    if (m && m[1]) {
       const nums = m[1]
         .split(",")
         .map((n) => n.trim())
