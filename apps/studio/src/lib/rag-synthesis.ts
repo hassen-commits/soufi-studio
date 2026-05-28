@@ -1,3 +1,4 @@
+import type Anthropic from "@anthropic-ai/sdk";
 import { anthropic, CLAUDE_MODEL } from "./anthropic.js";
 import { logger } from "./logger.js";
 import { ragSearch, type RagHit } from "../agent/handlers/rag-search.js";
@@ -154,7 +155,7 @@ export async function ragSynthesis(
   });
 
   const answer = completion.content
-    .filter((b): b is { type: "text"; text: string } => b.type === "text")
+    .filter((b): b is Anthropic.Messages.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("\n\n");
 
