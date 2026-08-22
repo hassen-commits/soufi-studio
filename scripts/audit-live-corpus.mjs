@@ -73,6 +73,18 @@ const nonFrench = rows.filter((row) => (row.metadata?.language ?? "fr") !== "fr"
 const translatedNonFrench = nonFrench.filter((row) => normalize(row.content_fr).length > 0);
 const missingWork = rows.filter((row) => !normalize(row.metadata?.work_fr || row.metadata?.work)).length;
 const missingSourceFile = rows.filter((row) => !normalize(row.metadata?.source_file)).length;
+const missingWorkRows = rows.filter((row) => !normalize(row.metadata?.work_fr || row.metadata?.work));
+const missingSourceRows = rows.filter((row) => !normalize(row.metadata?.source_file));
+
+const profileIncompleteRows = (items) =>
+  group(items, (row) =>
+    [
+      row.metadata?.author || "Non renseigné",
+      row.metadata?.work_fr || row.metadata?.work || "Œuvre non renseignée",
+      row.metadata?.source_file || "Source non renseignée",
+      row.metadata?.language || "fr",
+    ].join(" | "),
+  ).map(({ label, count, rate }) => ({ profile: label, count, rate }));
 
 const workLabel = (row) => row.metadata?.work_fr || row.metadata?.work || "Non renseigné";
 const sourceLabel = (row) => row.metadata?.source_file || "Non renseigné";
@@ -130,6 +142,15 @@ const audit = {
   byLanguage: group(rows, (row) => row.metadata?.language ?? "fr"),
   byWork: group(rows, (row) => row.metadata?.work_fr || row.metadata?.work),
   bySourceFile: group(rows, (row) => row.metadata?.source_file),
+  incompleteMetadata: {
+    missingWorkByProfile: profileIncompleteRows(missingWorkRows),
+    missingSourceByProfile: profileIncompleteRows(missingSourceRows),
+    missingBoth: rows.filter(
+      (row) =>
+        !normalize(row.metadata?.work_fr || row.metadata?.work) &&
+        !normalize(row.metadata?.source_file),
+    ).length,
+  },
   duplicates: {
     sameWorkGroups: duplicateGroups.length - crossWorkDuplicateGroups,
     crossWorkGroups: crossWorkDuplicateGroups,
