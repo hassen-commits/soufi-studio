@@ -4,7 +4,7 @@ import { MAITRE_BY_KEY, type AuthorKey } from "@soufi/content";
 import { listCitations } from "@soufi/db";
 import { JsonLd } from "@/components/json-ld";
 import { ogImageUrl } from "@/lib/og-url";
-import { cleanCitationText, formatWorkTitle } from "@/lib/citations";
+import { cleanCitationText, formatSourceLabel, formatWorkTitle } from "@/lib/citations";
 
 export const revalidate = 3600;
 
@@ -138,9 +138,7 @@ export default async function CitationPage({
 
       <footer className="space-y-1 text-sm text-navy-500">
         <p className="font-title italic text-gold-dark">— {maitre.fullName}</p>
-        {citation.workFr || citation.work ? (
-          <p className="text-xs">{formatWorkTitle(citation.workFr ?? citation.work)}</p>
-        ) : null}
+        <p className="text-xs">{formatSourceLabel(citation.workFr ?? citation.work)}</p>
       </footer>
 
       <div className="mt-16">

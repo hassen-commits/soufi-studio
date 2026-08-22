@@ -30,3 +30,6 @@ export function formatWorkTitle(work?: string): string | undefined {
     .trim();
 }
 
+export function formatSourceLabel(work?: string): string {
+  return formatWorkTitle(work) ?? "Source en cours de documentation";
+}

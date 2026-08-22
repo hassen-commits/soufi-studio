@@ -8,7 +8,7 @@ import {
 } from "@soufi/db";
 import { CitationCard } from "@/components/citation-card";
 import { JsonLd } from "@/components/json-ld";
-import { cleanCitationText, formatWorkTitle } from "@/lib/citations";
+import { cleanCitationText, formatSourceLabel } from "@/lib/citations";
 
 export const revalidate = 3600;
 
@@ -96,11 +96,9 @@ export default async function HomePage() {
           <p className="mt-4 font-title text-xl italic text-gold-dark">
             {citationDuJour.authorLabel}
           </p>
-          {citationDuJour.workFr || citationDuJour.work ? (
-            <p className="mt-1 text-xs text-navy-400">
-              {formatWorkTitle(citationDuJour.workFr ?? citationDuJour.work)}
-            </p>
-          ) : null}
+          <p className="mt-1 text-xs text-navy-400">
+            {formatSourceLabel(citationDuJour.workFr ?? citationDuJour.work)}
+          </p>
           <div className="mt-6">
             <Link
               href="/citation-du-jour"

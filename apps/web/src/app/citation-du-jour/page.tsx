@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getCitationOfTheDay } from "@soufi/db";
+import { formatSourceLabel } from "@/lib/citations";
 
 export const revalidate = 3600;
 
@@ -61,11 +62,9 @@ export default async function CitationDuJourPage() {
             <p className="font-title text-2xl italic text-gold-dark">
               {citation.authorLabel}
             </p>
-            {citation.workFr || citation.work ? (
-              <p className="text-sm text-navy-400">
-                {citation.workFr ?? citation.work}
-              </p>
-            ) : null}
+            <p className="text-sm text-navy-400">
+              {formatSourceLabel(citation.workFr ?? citation.work)}
+            </p>
           </div>
         </article>
       ) : (
