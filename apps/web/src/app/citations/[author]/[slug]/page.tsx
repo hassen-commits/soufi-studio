@@ -4,6 +4,7 @@ import { MAITRE_BY_KEY, type AuthorKey } from "@soufi/content";
 import { listCitations } from "@soufi/db";
 import { JsonLd } from "@/components/json-ld";
 import { ogImageUrl } from "@/lib/og-url";
+import { cleanCitationText, formatWorkTitle } from "@/lib/citations";
 
 export const revalidate = 3600;
 
@@ -100,7 +101,7 @@ export default async function CitationPage({
         data={{
           "@context": "https://schema.org",
           "@type": "Quotation",
-          text: citation.text,
+          text: cleanCitationText(citation.text),
           inLanguage: citation.language ?? "fr",
           creator: {
             "@type": "Person",
@@ -111,7 +112,7 @@ export default async function CitationPage({
             ? {
                 isPartOf: {
                   "@type": "Book",
-                  name: citation.workFr ?? citation.work,
+                  name: formatWorkTitle(citation.workFr ?? citation.work),
                 },
               }
             : {}),
@@ -130,7 +131,7 @@ export default async function CitationPage({
       <p className="ornament mt-8">۞</p>
 
       <blockquote className="mt-10 citation-text text-citation-lg text-navy-700">
-        « {citation.text} »
+        « {cleanCitationText(citation.text)} »
       </blockquote>
 
       <div className="gold-divider" />
@@ -138,7 +139,7 @@ export default async function CitationPage({
       <footer className="space-y-1 text-sm text-navy-500">
         <p className="font-title italic text-gold-dark">— {maitre.fullName}</p>
         {citation.workFr || citation.work ? (
-          <p className="text-xs">{citation.workFr ?? citation.work}</p>
+          <p className="text-xs">{formatWorkTitle(citation.workFr ?? citation.work)}</p>
         ) : null}
       </footer>
 

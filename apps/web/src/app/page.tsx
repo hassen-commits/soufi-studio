@@ -6,16 +6,10 @@ import {
   getCitationOfTheDay,
 } from "@soufi/db";
 import { CitationCard } from "@/components/citation-card";
+import { JsonLd } from "@/components/json-ld";
+import { cleanCitationText, formatWorkTitle } from "@/lib/citations";
 
 export const revalidate = 3600;
-
-function cleanText(s: string): string {
-  return s
-    .replace(/\t+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/[ ]{2,}/g, " ")
-    .trim();
-}
 
 export default async function HomePage() {
   let citations: Citation[] = [];
@@ -35,6 +29,20 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-24">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Soufi Studio",
+          url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://studio.iavance.fr",
+          description: "Bibliothèque francophone de la sagesse soufie.",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://studio.iavance.fr"}/recherche?q={search_term_string}`,
+            "query-input": "required name=search_term_string",
+          },
+        }}
+      />
       <section className="py-16 text-center">
         <p className="ornament">۞</p>
         <h1 className="mt-6 font-title text-6xl italic text-navy-700 md:text-7xl">
@@ -79,7 +87,7 @@ export default async function HomePage() {
             className="citation-text mt-2 text-xl italic text-navy-700 md:text-2xl"
             style={{ overflowWrap: "anywhere", lineHeight: 1.6 }}
           >
-            « {cleanText(citationDuJour.text)} »
+            « {cleanCitationText(citationDuJour.text)} »
           </p>
           <div className="mt-6 mx-auto h-px w-20 bg-gold/40" />
           <p className="mt-4 font-title text-xl italic text-gold-dark">
@@ -87,7 +95,7 @@ export default async function HomePage() {
           </p>
           {citationDuJour.workFr || citationDuJour.work ? (
             <p className="mt-1 text-xs text-navy-400">
-              {citationDuJour.workFr ?? citationDuJour.work}
+              {formatWorkTitle(citationDuJour.workFr ?? citationDuJour.work)}
             </p>
           ) : null}
           <div className="mt-6">

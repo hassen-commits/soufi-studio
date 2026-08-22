@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-gold/20 py-10">
@@ -9,6 +11,9 @@ export function SiteFooter() {
         <p className="mt-2 text-xs text-navy-400">
           © {new Date().getFullYear()} Soufi Studio · Passion_Coran · IAVANCE
         </p>
+        <nav aria-label="Informations" className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-navy-500">
+          <Link href="/a-propos" className="hover:text-gold-dark">À propos et méthode</Link>
+        </nav>
       </div>
     </footer>
   );

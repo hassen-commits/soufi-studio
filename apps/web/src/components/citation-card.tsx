@@ -1,9 +1,11 @@
 import Link from "next/link";
 import type { Citation } from "@soufi/content";
+import { cleanCitationText, formatWorkTitle } from "@/lib/citations";
 
 export function CitationCard({ citation }: { citation: Citation }) {
   const href = `/citations/${citation.author}/${citation.slug}`;
-  const cleaned = cleanText(citation.text);
+  const cleaned = cleanCitationText(citation.text);
+  const workTitle = formatWorkTitle(citation.workFr ?? citation.work);
   return (
     <Link
       href={href}
@@ -17,24 +19,12 @@ export function CitationCard({ citation }: { citation: Citation }) {
       </p>
       <div className="mt-5 flex items-baseline justify-between gap-3 border-t border-gold/10 pt-4">
         <span className="font-title text-lg italic text-gold-dark">{citation.authorLabel}</span>
-        {citation.workFr || citation.work ? (
-          <span className="truncate text-xs text-navy-400">{citation.workFr ?? citation.work}</span>
+        {workTitle ? (
+          <span className="truncate text-xs text-navy-400" title={workTitle}>{workTitle}</span>
         ) : null}
       </div>
     </Link>
   );
-}
-
-// Nettoie les artefacts d'extraction PDF avant affichage :
-// - tabulations → espaces
-// - sauts de ligne multiples → un seul
-// - espaces multiples → un seul
-function cleanText(s: string): string {
-  return s
-    .replace(/\t+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/[ ]{2,}/g, " ")
-    .trim();
 }
 
 function truncate(s: string, n: number): string {

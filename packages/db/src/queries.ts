@@ -219,7 +219,7 @@ export async function countCitationsByThemeMap(
  * page, puces, mots coupés). Le corpus est issu de scans PDF donc beaucoup
  * de chunks sont des passages bruts non-conclusifs.
  */
-function isQuotable(text: string): boolean {
+export function isQuotable(text: string): boolean {
   const t = text.trim();
   const len = t.length;
   if (len < 100 || len > 420) return false;
@@ -274,10 +274,25 @@ export async function getCitationOfTheDay(date?: Date): Promise<Citation | null>
 
 export async function getRandomCitations(n = 6): Promise<Citation[]> {
   const supabase = getSupabase();
-  const { count } = await supabase.from(TABLE).select("id", { count: "exact", head: true });
-  if (!count) return [];
-  const offset = Math.floor(Math.random() * Math.max(0, count - n));
-  return listCitations({ limit: n, offset });
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("id, content, content_fr, metadata");
+  if (error) throw error;
+
+  const pool = (data ?? [])
+    .map((row) => chunkToCitation(row as Chunk))
+    .filter((citation) => citation.language === "fr" && isQuotable(citation.text));
+
+  for (let i = 0; i < Math.min(n, pool.length); i += 1) {
+    const j = i + Math.floor(Math.random() * (pool.length - i));
+    const current = pool[i];
+    const replacement = pool[j];
+    if (current && replacement) {
+      pool[i] = replacement;
+      pool[j] = current;
+    }
+  }
+  return pool.slice(0, n);
 }
 
 // ============================================================

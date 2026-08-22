@@ -23,6 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: url("/maitres"), lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: url("/themes"), lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: url("/episodes"), lastModified: now, changeFrequency: "weekly", priority: 0.9 },
+    { url: url("/a-propos"), lastModified: now, changeFrequency: "monthly", priority: 0.6 },
   ];
 
   // Maîtres
