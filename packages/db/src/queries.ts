@@ -108,6 +108,7 @@ export async function listQuotableCitations(opts?: {
   const needed = offset + limit;
   const batchSize = 500;
   const selected: Citation[] = [];
+  const seenSlugs = new Set<string>();
   let rawOffset = 0;
 
   while (selected.length < needed) {
@@ -132,11 +133,18 @@ export async function listQuotableCitations(opts?: {
     if (error) throw error;
 
     const rows = data ?? [];
-    selected.push(
-      ...rows
-        .map((row) => chunkToCitation(row as Chunk))
-        .filter((citation) => citation.language === "fr" && isQuotable(citation.text)),
-    );
+    for (const row of rows) {
+      const citation = chunkToCitation(row as Chunk);
+      const uniqueKey = `${citation.author}:${citation.slug}`;
+      if (
+        citation.language === "fr" &&
+        isQuotable(citation.text) &&
+        !seenSlugs.has(uniqueKey)
+      ) {
+        seenSlugs.add(uniqueKey);
+        selected.push(citation);
+      }
+    }
 
     if (rows.length < batchSize) break;
     rawOffset += batchSize;
@@ -283,6 +291,12 @@ export function isQuotable(text: string): boolean {
   if (/\b\d{1,4}\b/.test(t)) return false;
   // Puces / séparateurs typographiques.
   if (/[•●▪◦►▶◀※•·*]/.test(t)) return false;
+  // Éléments éditoriaux du livre, pages de titre et notices bibliographiques.
+  if (
+    /^(avertissement|avant-propos|préface|introduction|bibliographie|table des matières|notice|glossaire)\b/i.test(t) ||
+    /\b(traduction,? notes et commentaire|tome (premier|second|i{1,3}|iv))\b/i.test(t) ||
+    /\b(éditeur|édition|isbn|copyright|tous droits réservés)\b/i.test(t)
+  ) return false;
   // Détecte les mots cassés par OCR : trop de "mots" de 1-2 caractères qui
   // ne sont pas des mots fonctionnels français courants.
   const stopShort = new Set([
