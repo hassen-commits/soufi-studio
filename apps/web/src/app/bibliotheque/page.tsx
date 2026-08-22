@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MAITRES, type AuthorKey, type Citation } from "@soufi/content";
-import { countCitationsByAuthor, listCitations } from "@soufi/db";
+import { countCitationsByAuthor, listQuotableCitations } from "@soufi/db";
 import { CitationCard } from "@/components/citation-card";
 
 export const revalidate = 600;
@@ -20,7 +20,7 @@ export default async function BibliothequePage({
   let total: number | null = null;
   try {
     const [items, counts] = await Promise.all([
-      listCitations({ author, limit: pageSize, offset: (page - 1) * pageSize }),
+      listQuotableCitations({ author, limit: pageSize, offset: (page - 1) * pageSize }),
       countCitationsByAuthor(),
     ]);
     citations = items;
@@ -36,8 +36,8 @@ export default async function BibliothequePage({
         <h1 className="mt-4 font-title text-5xl italic text-navy-700">Bibliothèque</h1>
         <p className="mt-3 text-sm text-navy-500">
           {total !== null
-            ? `${total.toLocaleString("fr-FR")} extraits des grands maîtres de la tradition soufie.`
-            : "Des milliers d’extraits des grands maîtres de la tradition soufie."}
+            ? `${total.toLocaleString("fr-FR")} passages archivés · sélection éditoriale à explorer.`
+            : "Une sélection éditoriale issue de milliers de passages archivés."}
         </p>
       </header>
 

@@ -17,10 +17,10 @@ export function CitationCard({ citation }: { citation: Citation }) {
       >
         « {truncate(cleaned, 220)} »
       </p>
-      <div className="mt-5 flex items-baseline justify-between gap-3 border-t border-gold/10 pt-4">
-        <span className="font-title text-lg italic text-gold-dark">{citation.authorLabel}</span>
+      <div className="mt-5 flex items-start justify-between gap-4 border-t border-gold/10 pt-4">
+        <span className="shrink-0 whitespace-nowrap font-title text-lg italic text-gold-dark">{citation.authorLabel}</span>
         {workTitle ? (
-          <span className="truncate text-xs text-navy-400" title={workTitle}>{workTitle}</span>
+          <span className="min-w-0 text-right text-xs leading-relaxed text-navy-400" title={workTitle}>{workTitle}</span>
         ) : null}
       </div>
     </Link>

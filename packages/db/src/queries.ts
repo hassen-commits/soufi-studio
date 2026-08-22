@@ -93,6 +93,58 @@ export async function listCitations(opts?: {
   return (data ?? []).map((row) => chunkToCitation(row as Chunk));
 }
 
+/**
+ * Liste publique nettoyée. La pagination porte sur les citations qui passent
+ * le contrôle éditorial, et non sur les lignes brutes issues des PDF.
+ */
+export async function listQuotableCitations(opts?: {
+  author?: AuthorKey;
+  limit?: number;
+  offset?: number;
+}): Promise<Citation[]> {
+  const supabase = getSupabase();
+  const limit = opts?.limit ?? 24;
+  const offset = opts?.offset ?? 0;
+  const needed = offset + limit;
+  const batchSize = 500;
+  const selected: Citation[] = [];
+  let rawOffset = 0;
+
+  while (selected.length < needed) {
+    let query = supabase
+      .from(TABLE)
+      .select("id, content, content_fr, metadata")
+      .range(rawOffset, rawOffset + batchSize - 1)
+      .order("id", { ascending: true });
+
+    if (opts?.author === "maitres_soufis") {
+      query = query.not(
+        "metadata->>author",
+        "in",
+        `(${MAIN_AUTHORS_DB.map((a) => `"${a}"`).join(",")})`,
+      );
+    } else if (opts?.author) {
+      const dbValue = AUTHOR_DB_VALUE[opts.author];
+      if (dbValue) query = query.eq("metadata->>author", dbValue);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const rows = data ?? [];
+    selected.push(
+      ...rows
+        .map((row) => chunkToCitation(row as Chunk))
+        .filter((citation) => citation.language === "fr" && isQuotable(citation.text)),
+    );
+
+    if (rows.length < batchSize) break;
+    rawOffset += batchSize;
+  }
+
+  return selected.slice(offset, needed);
+}
+
 export async function countCitationsByAuthor(): Promise<Record<AuthorKey, number>> {
   const supabase = getSupabase();
   const counts = {} as Record<AuthorKey, number>;
