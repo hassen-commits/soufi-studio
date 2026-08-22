@@ -183,6 +183,15 @@ export async function countCitationsByAuthor(): Promise<Record<AuthorKey, number
   return counts;
 }
 
+export async function countAllCitations(): Promise<number> {
+  const supabase = getSupabase();
+  const { count, error } = await supabase
+    .from(TABLE)
+    .select("id", { count: "exact", head: true });
+  if (error) throw error;
+  return count ?? 0;
+}
+
 // Découverte par thème — le corpus n'ayant pas de tags `metadata.theme`,
 // on s'appuie sur un OR de `content ilike '%keyword%'`. Imparfait (faux positifs
 // possibles, dépend du vocabulaire FR/translit) mais suffisant pour une page
@@ -282,7 +291,7 @@ export async function countCitationsByThemeMap(
 export function isQuotable(text: string): boolean {
   const t = text.trim();
   const len = t.length;
-  if (len < 100 || len > 420) return false;
+  if (len < 100 || len > 900) return false;
   // Doit commencer par une majuscule ou un guillemet ouvrant — pas de mid-mot.
   if (!/^[A-ZÀÂÉÈÊÎÔÙÇ«"„''(]/.test(t)) return false;
   // Doit finir par une ponctuation de fin de phrase ou un guillemet fermant.

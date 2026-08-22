@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MAITRES, type AuthorKey, type Citation } from "@soufi/content";
-import { countCitationsByAuthor, listQuotableCitations } from "@soufi/db";
+import { countAllCitations, countCitationsByAuthor, listQuotableCitations } from "@soufi/db";
 import { CitationCard } from "@/components/citation-card";
 
 export const revalidate = 600;
@@ -19,12 +19,13 @@ export default async function BibliothequePage({
   let error: string | null = null;
   let total: number | null = null;
   try {
-    const [items, counts] = await Promise.all([
+    const [items, corpusTotal, authorCounts] = await Promise.all([
       listQuotableCitations({ author, limit: pageSize, offset: (page - 1) * pageSize }),
+      countAllCitations(),
       countCitationsByAuthor(),
     ]);
     citations = items;
-    total = author ? counts[author] ?? 0 : Object.values(counts).reduce((sum, n) => sum + n, 0);
+    total = author ? authorCounts[author] ?? 0 : corpusTotal;
   } catch (e) {
     error = e instanceof Error ? e.message : "Erreur de connexion à la bibliothèque";
   }

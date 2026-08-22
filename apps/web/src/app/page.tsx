@@ -3,6 +3,7 @@ import { MAITRES, type Citation } from "@soufi/content";
 import {
   getRandomCitations,
   countCitationsByAuthor,
+  countAllCitations,
   getCitationOfTheDay,
 } from "@soufi/db";
 import { CitationCard } from "@/components/citation-card";
@@ -15,17 +16,19 @@ export default async function HomePage() {
   let citations: Citation[] = [];
   let counts: Record<string, number> = {};
   let citationDuJour: Citation | null = null;
+  let corpusTotal = 0;
   try {
-    [citations, counts, citationDuJour] = await Promise.all([
+    [citations, counts, citationDuJour, corpusTotal] = await Promise.all([
       getRandomCitations(6),
       countCitationsByAuthor(),
       getCitationOfTheDay(),
+      countAllCitations(),
     ]);
   } catch {
     // Pas de connexion Supabase configurée — on affiche le site sans les données
   }
 
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const total = corpusTotal;
 
   return (
     <div className="space-y-24">
