@@ -14,6 +14,7 @@
  * Ne touche pas la colonne `content` ni l'embedding (la recherche RAG
  * reste basée sur le texte original).
  */
+import { appendFile, mkdir } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "../env.js";
@@ -59,22 +60,63 @@ Règles de traduction :
 
 interface Args {
   limit: number;
-  dry: boolean;
+  write: boolean;
 }
 
 function parseArgs(): Args {
   const args = process.argv.slice(2);
-  let limit = 80;
-  let dry = false;
+  let limit = 20;
+  let write = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--limit" && args[i + 1]) {
       limit = Number(args[i + 1]);
       i++;
-    } else if (args[i] === "--dry") {
-      dry = true;
+    } else if (args[i] === "--write") {
+      write = true;
     }
   }
-  return { limit, dry };
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error("--limit doit être un entier compris entre 1 et 100");
+  }
+  return { limit, write };
+}
+
+function validateFrench(source: string, translation: string): void {
+  const ratio = translation.length / Math.max(source.length, 1);
+  if (translation.length < 40 || ratio < 0.35 || ratio > 2.2) {
+    throw new Error(`traduction suspecte (ratio=${ratio.toFixed(2)})`);
+  }
+  if (/^(voici|traduction|note|commentaire)\b/i.test(translation)) {
+    throw new Error("préambule non autorisé dans la traduction");
+  }
+  const frenchMarkers = translation.match(/\b(le|la|les|de|des|du|que|qui|dans|est|son|sa|ses)\b/gi) ?? [];
+  if (frenchMarkers.length < 3) throw new Error("texte français non détecté");
+}
+
+async function fetchCandidates(
+  sb: ReturnType<typeof createClient>,
+  limit: number,
+): Promise<Row[]> {
+  const candidates: Row[] = [];
+  const pageSize = 500;
+  let offset = 0;
+
+  while (candidates.length < limit) {
+    const { data, error } = await sb
+      .from("chunks")
+      .select("id, content, content_fr")
+      .eq("metadata->>author", TUSTARI_AUTHOR)
+      .is("content_fr", null)
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as Row[];
+    candidates.push(...rows.filter((row) => !looksLikeNoise(String(row.content ?? ""))));
+    if (rows.length < pageSize) break;
+    offset += pageSize;
+  }
+
+  return candidates.slice(0, limit);
 }
 
 async function translateOne(
@@ -97,35 +139,17 @@ async function translateOne(
 }
 
 async function main() {
-  const { limit, dry } = parseArgs();
+  const { limit, write } = parseArgs();
 
   const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
   const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
-  console.log(`Fetching Tustarî chunks (limit=${limit}, dry=${dry})…`);
-  const { data, error } = await sb
-    .from("chunks")
-    .select("id, content, content_fr")
-    .eq("metadata->>author", TUSTARI_AUTHOR)
-    .is("content_fr", null)
-    .order("id", { ascending: true })
-    .limit(limit * 3); // marge car on va en filtrer beaucoup
-
-  if (error) {
-    console.error("Supabase error:", error);
-    process.exit(1);
-  }
-
-  const rows = (data ?? []) as Row[];
-  console.log(`Total chunks fetched (non-translated) : ${rows.length}`);
-
-  const toTranslate = rows
-    .filter((r) => !looksLikeNoise(String(r.content ?? "")))
-    .slice(0, limit);
+  console.log(`Fetching Tustarî chunks (limit=${limit}, write=${write})…`);
+  const toTranslate = await fetchCandidates(sb, limit);
   console.log(`After noise filter, will translate : ${toTranslate.length}`);
 
-  if (dry) {
-    console.log("\n--- DRY RUN — would translate ---");
+  if (!write) {
+    console.log("\n--- APERÇU — aucune écriture (ajouter --write pour valider) ---");
     for (const r of toTranslate.slice(0, 3)) {
       console.log(`\n[id=${r.id}] ${r.content.slice(0, 200)}…`);
     }
@@ -144,6 +168,13 @@ async function main() {
         skipped++;
         continue;
       }
+      validateFrench(row.content, fr);
+      await mkdir("outputs/translation-backups", { recursive: true });
+      await appendFile(
+        "outputs/translation-backups/tustari-content-fr.jsonl",
+        `${JSON.stringify({ id: row.id, content_fr: row.content_fr, translated_at: new Date().toISOString() })}\n`,
+        "utf8",
+      );
       const { error: upErr } = await sb
         .from("chunks")
         .update({ content_fr: fr })
