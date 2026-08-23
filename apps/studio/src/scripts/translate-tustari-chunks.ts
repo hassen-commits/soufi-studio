@@ -15,9 +15,8 @@
  * reste basée sur le texte original).
  */
 import { appendFile, mkdir } from "node:fs/promises";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
-import { env } from "../env.js";
 
 const TUSTARI_AUTHOR = "Sahl al-Tustari";
 
@@ -94,7 +93,7 @@ function validateFrench(source: string, translation: string): void {
 }
 
 async function fetchCandidates(
-  sb: ReturnType<typeof createClient>,
+  sb: SupabaseClient,
   limit: number,
 ): Promise<Row[]> {
   const candidates: Row[] = [];
@@ -124,14 +123,16 @@ async function translateOne(
   text: string,
 ): Promise<string | null> {
   const completion = await client.messages.create({
-    model: env.CLAUDE_MODEL,
+    model: process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6",
     max_tokens: 1500,
     system: TRANSLATION_SYSTEM,
     messages: [{ role: "user", content: text }],
   });
   const answer = completion.content
-    .filter((b): b is Anthropic.Messages.TextBlock => b.type === "text")
-    .map((b) => b.text)
+    .filter(
+      (b: Anthropic.Messages.ContentBlock): b is Anthropic.Messages.TextBlock => b.type === "text",
+    )
+    .map((b: Anthropic.Messages.TextBlock) => b.text)
     .join("\n")
     .trim();
   if (answer === "SKIP" || answer.length === 0) return null;
@@ -141,8 +142,17 @@ async function translateOne(
 async function main() {
   const { limit, write } = parseArgs();
 
-  const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
-  const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!supabaseUrl || !serviceKey || !anthropicKey) {
+    throw new Error(
+      "Variables requises : NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_KEY et ANTHROPIC_API_KEY",
+    );
+  }
+
+  const sb = createClient(supabaseUrl, serviceKey);
+  const anthropic = new Anthropic({ apiKey: anthropicKey });
 
   console.log(`Fetching Tustarî chunks (limit=${limit}, write=${write})…`);
   const toTranslate = await fetchCandidates(sb, limit);
